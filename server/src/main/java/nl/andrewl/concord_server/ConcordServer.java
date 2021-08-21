@@ -3,6 +3,9 @@ package nl.andrewl.concord_server;
 import lombok.extern.java.Log;
 import nl.andrewl.concord_core.msg.Serializer;
 import nl.andrewl.concord_core.msg.types.Chat;
+import nl.andrewl.concord_core.msg.types.ChatHistoryRequest;
+import org.dizitart.no2.Document;
+import org.dizitart.no2.Nitrite;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -19,10 +22,14 @@ public class ConcordServer implements Runnable {
 	private final Map<Long, ClientThread> clients = new ConcurrentHashMap<>(32);
 	private final int port;
 	private final Random random;
+	private final Nitrite db;
 
 	public ConcordServer(int port) {
 		this.port = port;
 		this.random = new SecureRandom();
+		this.db = Nitrite.builder()
+				.filePath("concord-server.db")
+				.openOrCreate();
 	}
 
 	public long registerClient(ClientThread clientThread) {
@@ -37,6 +44,15 @@ public class ConcordServer implements Runnable {
 	}
 
 	public void handleChat(Chat chat) {
+		var collection = db.getCollection("channel-TEST");
+		long messageId = this.random.nextLong();
+		Document doc = Document.createDocument(Long.toHexString(messageId), "message")
+				.put("senderId", Long.toHexString(chat.getSenderId()))
+				.put("senderNickname", chat.getSenderNickname())
+				.put("timestamp", chat.getTimestamp())
+				.put("message", chat.getMessage());
+		collection.insert(doc);
+		db.commit();
 		System.out.println(chat.getSenderNickname() + ": " + chat.getMessage());
 		ByteArrayOutputStream baos = new ByteArrayOutputStream(chat.getByteCount());
 		try {
@@ -49,6 +65,10 @@ public class ConcordServer implements Runnable {
 		for (var client : clients.values()) {
 			client.sendToClient(data);
 		}
+	}
+
+	public void handleHistoryRequest(ChatHistoryRequest request, ClientThread clientThread) {
+
 	}
 
 	@Override

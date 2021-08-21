@@ -5,6 +5,7 @@ import lombok.extern.java.Log;
 import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.Serializer;
 import nl.andrewl.concord_core.msg.types.Chat;
+import nl.andrewl.concord_core.msg.types.ChatHistoryRequest;
 import nl.andrewl.concord_core.msg.types.Identification;
 import nl.andrewl.concord_core.msg.types.ServerWelcome;
 
@@ -65,6 +66,8 @@ public class ClientThread extends Thread {
 				var msg = Serializer.readMessage(this.in);
 				if (msg instanceof Chat chat) {
 					this.server.handleChat(chat);
+				} else if (msg instanceof ChatHistoryRequest historyRequest) {
+					this.server.handleHistoryRequest(historyRequest, this);
 				}
 			} catch (IOException e) {
 				log.info("Client disconnected: " + e.getMessage());

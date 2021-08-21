@@ -82,4 +82,13 @@ public interface Message {
 		if (read != length) throw new IOException("Not all bytes of a string of length " + length + " could be read.");
 		return new String(data, StandardCharsets.UTF_8);
 	}
+
+	default void writeEnum(Enum<?> value, DataOutputStream o) throws IOException {
+		o.writeInt(value.ordinal());
+	}
+
+	default <T extends Enum<?>> T readEnum(Class<T> e, DataInputStream i) throws IOException {
+		int ordinal = i.readInt();
+		return e.getEnumConstants()[ordinal];
+	}
 }
