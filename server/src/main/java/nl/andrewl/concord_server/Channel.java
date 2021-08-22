@@ -3,12 +3,12 @@ package nl.andrewl.concord_server;
 import lombok.Getter;
 import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.Serializer;
+import nl.andrewl.concord_core.msg.types.ChannelUsersResponse;
+import org.dizitart.no2.NitriteCollection;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -23,19 +23,32 @@ public class Channel {
 
 	private final Set<ClientThread> connectedClients;
 
-	public Channel(ConcordServer server, UUID id, String name) {
+	private final NitriteCollection messageCollection;
+
+	public Channel(ConcordServer server, UUID id, String name, NitriteCollection messageCollection) {
 		this.server = server;
 		this.id = id;
 		this.name = name;
 		this.connectedClients = ConcurrentHashMap.newKeySet();
+		this.messageCollection = messageCollection;
 	}
 
 	public void addClient(ClientThread clientThread) {
 		this.connectedClients.add(clientThread);
+		try {
+			this.sendMessage(new ChannelUsersResponse(this.getUserData()));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void removeClient(ClientThread clientThread) {
 		this.connectedClients.remove(clientThread);
+		try {
+			this.sendMessage(new ChannelUsersResponse(this.getUserData()));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -51,6 +64,15 @@ public class Channel {
 		for (var client : this.connectedClients) {
 			client.sendToClient(data);
 		}
+	}
+
+	public List<ChannelUsersResponse.UserData> getUserData() {
+		List<ChannelUsersResponse.UserData> users = new ArrayList<>();
+		for (var clientThread : this.getConnectedClients()) {
+			users.add(new ChannelUsersResponse.UserData(clientThread.getClientId(), clientThread.getClientNickname()));
+		}
+		users.sort(Comparator.comparing(ChannelUsersResponse.UserData::getName));
+		return users;
 	}
 
 	@Override

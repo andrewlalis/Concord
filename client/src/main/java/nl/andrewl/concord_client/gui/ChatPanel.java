@@ -5,8 +5,7 @@ import lombok.Getter;
 import nl.andrewl.concord_client.ClientMessageListener;
 import nl.andrewl.concord_client.ConcordClient;
 import nl.andrewl.concord_core.msg.Message;
-import nl.andrewl.concord_core.msg.types.Chat;
-import nl.andrewl.concord_core.msg.types.MoveToChannel;
+import nl.andrewl.concord_core.msg.types.*;
 
 import java.io.IOException;
 
@@ -24,16 +23,16 @@ public class ChatPanel extends Panel implements ClientMessageListener {
 	private final UserList userList;
 
 	private final ConcordClient client;
+	private final TextGUIThread guiThread;
 
 	public ChatPanel(ConcordClient client, Window window) {
 		super(new BorderLayout());
+		this.guiThread = window.getTextGUI().getGUIThread();
 		this.client = client;
 		this.channelChatBox = new ChannelChatBox(client, window);
 		this.channelList = new ChannelList(client);
 		this.channelList.setChannels();
-		this.userList = new UserList();
-		this.userList.addItem("andrew");
-		this.userList.addItem("tester");
+		this.userList = new UserList(client);
 
 		Border b;
 		b = Borders.doubleLine("Channels");
@@ -53,9 +52,25 @@ public class ChatPanel extends Panel implements ClientMessageListener {
 			this.channelChatBox.getChatList().addItem(chat);
 		} else if (message instanceof MoveToChannel moveToChannel) {
 			client.setCurrentChannelId(moveToChannel.getChannelId());
-			this.channelList.setChannels();
-			this.channelChatBox.getChatList().clearItems();
-			this.channelChatBox.refreshBorder();
+			try {
+				client.sendMessage(new ChatHistoryRequest(moveToChannel.getChannelId(), ChatHistoryRequest.Source.CHANNEL, ""));
+				client.sendMessage(new ChannelUsersRequest(moveToChannel.getChannelId()));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			this.guiThread.invokeLater(() -> {
+				this.channelList.setChannels();
+				this.channelChatBox.getChatList().clearItems();
+				this.channelChatBox.refreshBorder();
+				this.channelChatBox.getInputTextBox().takeFocus();
+			});
+		} else if (message instanceof ChannelUsersResponse channelUsersResponse) {
+			this.guiThread.invokeLater(() -> {
+				this.userList.updateUsers(channelUsersResponse);
+			});
+		} else if (message instanceof ChatHistoryResponse chatHistoryResponse) {
+			System.out.println("Got chat history response: " + chatHistoryResponse.getSourceId());
+			System.out.println(chatHistoryResponse.getMessages());
 		}
 	}
 }

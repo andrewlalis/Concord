@@ -12,10 +12,8 @@ public class ChatHandler implements MessageHandler<Chat> {
 	@Override
 	public void handle(Chat msg, ClientThread client, ConcordServer server) throws IOException {
 		server.getExecutorService().submit(() -> {
-			var collection = server.getDb().getCollection("channel-" + client.getCurrentChannel().getId());
-			var messageId = server.getIdProvider().newId();
+			var collection = client.getCurrentChannel().getMessageCollection();
 			Document doc = new Document(Map.of(
-					"_id", messageId,
 					"senderId", msg.getSenderId(),
 					"senderNickname", msg.getSenderNickname(),
 					"timestamp", msg.getTimestamp(),

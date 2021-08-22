@@ -5,11 +5,15 @@ import lombok.extern.java.Log;
 import nl.andrewl.concord_core.msg.types.Identification;
 import nl.andrewl.concord_core.msg.types.ServerMetaData;
 import nl.andrewl.concord_core.msg.types.ServerWelcome;
+import nl.andrewl.concord_server.config.ServerConfig;
+import org.dizitart.no2.IndexOptions;
+import org.dizitart.no2.IndexType;
 import org.dizitart.no2.Nitrite;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.UUID;
@@ -22,6 +26,7 @@ import java.util.stream.Collectors;
 public class ConcordServer implements Runnable {
 	private final Map<UUID, ClientThread> clients;
 	private final int port;
+	private final String name;
 	@Getter
 	private final IdProvider idProvider;
 	@Getter
@@ -34,9 +39,11 @@ public class ConcordServer implements Runnable {
 	@Getter
 	private final ChannelManager channelManager;
 
-	public ConcordServer(int port) {
-		this.port = port;
+	public ConcordServer() {
 		this.idProvider = new UUIDProvider();
+		ServerConfig config = ServerConfig.loadOrCreate(Path.of("server-config.json"), idProvider);
+		this.port = config.port();
+		this.name = config.name();
 		this.db = Nitrite.builder()
 				.filePath("concord-server.db")
 				.openOrCreate();
@@ -45,6 +52,33 @@ public class ConcordServer implements Runnable {
 		this.executorService = Executors.newCachedThreadPool();
 		this.eventManager = new EventManager(this);
 		this.channelManager = new ChannelManager(this);
+		for (var channelConfig : config.channels()) {
+			this.channelManager.addChannel(new Channel(
+					this,
+					UUID.fromString(channelConfig.id()),
+					channelConfig.name(),
+					this.db.getCollection("channel-" + channelConfig.id())
+			));
+		}
+		this.initDatabase();
+	}
+
+	private void initDatabase() {
+		for (var channel : this.channelManager.getChannels()) {
+			var col = channel.getMessageCollection();
+			if (!col.hasIndex("timestamp")) {
+				log.info("Adding timestamp index to collection for channel " + channel.getName());
+				col.createIndex("timestamp", IndexOptions.indexOptions(IndexType.NonUnique));
+			}
+			if (!col.hasIndex("senderNickname")) {
+				log.info("Adding senderNickname index to collection for channel " + channel.getName());
+				col.createIndex("senderNickname", IndexOptions.indexOptions(IndexType.Fulltext));
+			}
+			if (!col.hasIndex("message")) {
+				log.info("Adding message index to collection for channel " + channel.getName());
+				col.createIndex("message", IndexOptions.indexOptions(IndexType.Fulltext));
+			}
+		}
 	}
 
 	/**
@@ -55,28 +89,34 @@ public class ConcordServer implements Runnable {
 	 * channel.
 	 * @param identification The client's identification data.
 	 * @param clientThread The client manager thread.
-	 * @return The id of the client.
 	 */
-	public UUID registerClient(Identification identification, ClientThread clientThread) {
+	public void registerClient(Identification identification, ClientThread clientThread) {
 		var id = this.idProvider.newId();
 		log.info("Registering new client " + identification.getNickname() + " with id " + id);
 		this.clients.put(id, clientThread);
+		clientThread.setClientId(id);
+		clientThread.setClientNickname(identification.getNickname());
 		// Send a welcome reply containing all the initial server info the client needs.
 		ServerMetaData metaData = new ServerMetaData(
-				"Testing Server",
+				this.name,
 				this.channelManager.getChannels().stream()
 						.map(channel -> new ServerMetaData.ChannelData(channel.getId(), channel.getName()))
 						.sorted(Comparator.comparing(ServerMetaData.ChannelData::getName))
 						.collect(Collectors.toList())
 		);
+		// Immediately add the client to the default channel and send the initial welcome message.
 		var defaultChannel = this.channelManager.getChannelByName("general").orElseThrow();
+		clientThread.sendToClient(new ServerWelcome(id, defaultChannel.getId(), metaData));
+		// It is important that we send the welcome message first. The client expects this as the initial response to their identification message.
 		defaultChannel.addClient(clientThread);
 		clientThread.setCurrentChannel(defaultChannel);
-		clientThread.sendToClient(new ServerWelcome(id, defaultChannel.getId(), metaData));
-
-		return id;
 	}
 
+	/**
+	 * De-registers a client from the server, removing them from any channel
+	 * they're currently in.
+	 * @param clientId The id of the client to remove.
+	 */
 	public void deregisterClient(UUID clientId) {
 		var client = this.clients.remove(clientId);
 		if (client != null) {
@@ -104,7 +144,7 @@ public class ConcordServer implements Runnable {
 	}
 
 	public static void main(String[] args) {
-		var server = new ConcordServer(8123);
+		var server = new ConcordServer();
 		server.run();
 	}
 }

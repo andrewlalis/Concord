@@ -11,12 +11,8 @@ import lombok.Getter;
 import lombok.Setter;
 import nl.andrewl.concord_client.gui.MainWindow;
 import nl.andrewl.concord_core.msg.Message;
-import nl.andrewl.concord_core.msg.MessageUtils;
 import nl.andrewl.concord_core.msg.Serializer;
-import nl.andrewl.concord_core.msg.types.Chat;
-import nl.andrewl.concord_core.msg.types.Identification;
-import nl.andrewl.concord_core.msg.types.ServerMetaData;
-import nl.andrewl.concord_core.msg.types.ServerWelcome;
+import nl.andrewl.concord_core.msg.types.*;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -28,7 +24,6 @@ import java.util.Set;
 import java.util.UUID;
 
 public class ConcordClient implements Runnable {
-
 	private final Socket socket;
 	private final DataInputStream in;
 	private final DataOutputStream out;
@@ -53,6 +48,10 @@ public class ConcordClient implements Runnable {
 			this.id = welcome.getClientId();
 			this.currentChannelId = welcome.getCurrentChannelId();
 			this.serverMetaData = welcome.getMetaData();
+
+			// Start fetching initial data for the channel we were initially put into.
+			this.sendMessage(new ChannelUsersRequest(this.currentChannelId));
+			this.sendMessage(new ChatHistoryRequest(this.currentChannelId, ChatHistoryRequest.Source.CHANNEL, ""));
 		} else {
 			throw new IOException("Unexpected response from the server after sending identification message.");
 		}

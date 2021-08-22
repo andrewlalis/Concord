@@ -10,11 +10,17 @@ import nl.andrewl.concord_client.ConcordClient;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * This panel occupies the center of the interface, and displays the list of
+ * recent messages, along with an input text box for the user to type messages
+ * into.
+ */
 public class ChannelChatBox extends Panel {
 	private final ConcordClient client;
 	private Border chatBorder;
 	@Getter
 	private final ChatList chatList;
+	@Getter
 	private final TextBox inputTextBox;
 	public ChannelChatBox(ConcordClient client, Window window) {
 		super(new BorderLayout());

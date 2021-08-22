@@ -6,7 +6,6 @@ import lombok.extern.java.Log;
 import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.Serializer;
 import nl.andrewl.concord_core.msg.types.Identification;
-import nl.andrewl.concord_core.msg.types.ServerWelcome;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -16,7 +15,7 @@ import java.util.UUID;
 
 /**
  * This thread is responsible for handling the connection to a single client of
- * a server.
+ * a server. The client thread acts as the server's representation of a client.
  */
 @Log
 public class ClientThread extends Thread {
@@ -26,8 +25,11 @@ public class ClientThread extends Thread {
 
 	private final ConcordServer server;
 
+	@Getter
+	@Setter
 	private UUID clientId = null;
 	@Getter
+	@Setter
 	private String clientNickname = null;
 
 	@Getter
@@ -43,7 +45,7 @@ public class ClientThread extends Thread {
 		this.out = new DataOutputStream(socket.getOutputStream());
 	}
 
-	public void sendToClient(Message message) {
+	public synchronized void sendToClient(Message message) {
 		try {
 			Serializer.writeMessage(message, this.out);
 		} catch (IOException e) {
@@ -51,7 +53,7 @@ public class ClientThread extends Thread {
 		}
 	}
 
-	public void sendToClient(byte[] bytes) {
+	public synchronized void sendToClient(byte[] bytes) {
 		try {
 			this.out.write(bytes);
 			this.out.flush();
@@ -112,8 +114,7 @@ public class ClientThread extends Thread {
 			try {
 				var msg = Serializer.readMessage(this.in);
 				if (msg instanceof Identification id) {
-					this.clientNickname = id.getNickname();
-					this.clientId = this.server.registerClient(id, this);
+					this.server.registerClient(id, this);
 					return true;
 				}
 			} catch (IOException e) {

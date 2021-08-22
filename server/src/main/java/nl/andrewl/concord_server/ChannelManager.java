@@ -2,7 +2,10 @@ package nl.andrewl.concord_server;
 
 import nl.andrewl.concord_core.msg.types.MoveToChannel;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ChannelManager {
@@ -14,10 +17,6 @@ public class ChannelManager {
 		this.server = server;
 		this.channelNameMap = new ConcurrentHashMap<>();
 		this.channelIdMap = new ConcurrentHashMap<>();
-		Channel general = new Channel(server, server.getIdProvider().newId(), "general");
-		Channel memes = new Channel(server, server.getIdProvider().newId(), "memes");
-		this.addChannel(general);
-		this.addChannel(memes);
 	}
 
 	public Set<Channel> getChannels() {
@@ -44,7 +43,8 @@ public class ChannelManager {
 
 	public void moveToChannel(ClientThread client, Channel channel) {
 		if (client.getCurrentChannel() != null) {
-			client.getCurrentChannel().removeClient(client);
+			var previousChannel = client.getCurrentChannel();
+			previousChannel.removeClient(client);
 		}
 		channel.addClient(client);
 		client.setCurrentChannel(channel);

@@ -1,5 +1,6 @@
 package nl.andrewl.concord_core.msg.types;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import nl.andrewl.concord_core.msg.Message;
@@ -17,6 +18,7 @@ import java.util.UUID;
  */
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class ChatHistoryResponse implements Message {
 	private UUID sourceId;
 	private ChatHistoryRequest.Source sourceType;

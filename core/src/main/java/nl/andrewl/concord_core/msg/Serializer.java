@@ -19,6 +19,8 @@ public class Serializer {
 		registerType(3, MoveToChannel.class);
 		registerType(4, ChatHistoryRequest.class);
 		registerType(5, ChatHistoryResponse.class);
+		registerType(6, ChannelUsersRequest.class);
+		registerType(7, ChannelUsersResponse.class);
 	}
 
 	private static void registerType(int id, Class<? extends Message> clazz) {

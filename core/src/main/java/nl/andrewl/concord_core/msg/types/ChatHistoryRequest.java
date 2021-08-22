@@ -1,5 +1,6 @@
 package nl.andrewl.concord_core.msg.types;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import nl.andrewl.concord_core.msg.Message;
@@ -46,6 +47,7 @@ import static nl.andrewl.concord_core.msg.MessageUtils.*;
  */
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class ChatHistoryRequest implements Message {
 	public enum Source {CHANNEL, THREAD, DIRECT_MESSAGE}
 
