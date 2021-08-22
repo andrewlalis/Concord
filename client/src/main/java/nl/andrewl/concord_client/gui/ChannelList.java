@@ -1,6 +1,38 @@
 package nl.andrewl.concord_client.gui;
 
-import com.googlecode.lanterna.gui2.AbstractListBox;
+import com.googlecode.lanterna.gui2.Button;
+import com.googlecode.lanterna.gui2.Direction;
+import com.googlecode.lanterna.gui2.LinearLayout;
+import com.googlecode.lanterna.gui2.Panel;
+import nl.andrewl.concord_client.ConcordClient;
+import nl.andrewl.concord_core.msg.types.MoveToChannel;
 
-public class ChannelList extends AbstractListBox<String, ChannelList> {
+import java.io.IOException;
+
+public class ChannelList extends Panel {
+	private final ConcordClient client;
+
+	public ChannelList(ConcordClient client) {
+		super(new LinearLayout(Direction.VERTICAL));
+		this.client = client;
+	}
+
+	public void setChannels() {
+		this.removeAllComponents();
+		for (var channel : this.client.getServerMetaData().getChannels()) {
+			String name = channel.getName();
+			if (client.getCurrentChannelId().equals(channel.getId())) {
+				name = "*" + name;
+			}
+			Button b = new Button(name, () -> {
+				System.out.println("Sending request to go to channel " + channel.getName());
+				try {
+					client.sendMessage(new MoveToChannel(channel.getId()));
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			});
+			this.addComponent(b, LinearLayout.createLayoutData(LinearLayout.Alignment.End));
+		}
+	}
 }

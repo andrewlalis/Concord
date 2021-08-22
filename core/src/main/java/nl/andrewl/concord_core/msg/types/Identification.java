@@ -3,6 +3,7 @@ package nl.andrewl.concord_core.msg.types;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import nl.andrewl.concord_core.msg.Message;
+import nl.andrewl.concord_core.msg.MessageUtils;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -23,16 +24,16 @@ public class Identification implements Message {
 
 	@Override
 	public int getByteCount() {
-		return getByteSize(this.nickname);
+		return MessageUtils.getByteSize(this.nickname);
 	}
 
 	@Override
 	public void write(DataOutputStream o) throws IOException {
-		writeString(this.nickname, o);
+		MessageUtils.writeString(this.nickname, o);
 	}
 
 	@Override
 	public void read(DataInputStream i) throws IOException {
-		this.nickname = readString(i);
+		this.nickname = MessageUtils.readString(i);
 	}
 }

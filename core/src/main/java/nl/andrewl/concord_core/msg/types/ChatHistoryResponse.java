@@ -3,19 +3,22 @@ package nl.andrewl.concord_core.msg.types;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import nl.andrewl.concord_core.msg.Message;
+import nl.andrewl.concord_core.msg.MessageUtils;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 /**
- * The response that a server sends to a {@link ChatHistoryRequest}.
+ * The response that a server sends to a {@link ChatHistoryRequest}. The list of
+ * messages is ordered by timestamp, with the newest messages appearing first.
  */
 @Data
 @NoArgsConstructor
 public class ChatHistoryResponse implements Message {
-	private long sourceId;
+	private UUID sourceId;
 	private ChatHistoryRequest.Source sourceType;
 	List<Chat> messages;
 
@@ -30,8 +33,8 @@ public class ChatHistoryResponse implements Message {
 
 	@Override
 	public void write(DataOutputStream o) throws IOException {
-		o.writeLong(this.sourceId);
-		writeEnum(this.sourceType, o);
+		MessageUtils.writeUUID(this.sourceId, o);
+		MessageUtils.writeEnum(this.sourceType, o);
 		o.writeInt(messages.size());
 		for (var message : this.messages) {
 			message.write(o);
@@ -40,8 +43,8 @@ public class ChatHistoryResponse implements Message {
 
 	@Override
 	public void read(DataInputStream i) throws IOException {
-		this.sourceId = i.readInt();
-		this.sourceType = readEnum(ChatHistoryRequest.Source.class, i);
+		this.sourceId = MessageUtils.readUUID(i);
+		this.sourceType = MessageUtils.readEnum(ChatHistoryRequest.Source.class, i);
 		int messageCount = i.readInt();
 		Chat[] messages = new Chat[messageCount];
 		for (int k = 0; k < messageCount; k++) {

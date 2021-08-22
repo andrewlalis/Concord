@@ -7,6 +7,9 @@ import nl.andrewl.concord_core.msg.Message;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.UUID;
+
+import static nl.andrewl.concord_core.msg.MessageUtils.*;
 
 /**
  * This message contains information about a chat message that a user sent.
@@ -14,12 +17,12 @@ import java.io.IOException;
 @Data
 @NoArgsConstructor
 public class Chat implements Message {
-	private long senderId;
+	private UUID senderId;
 	private String senderNickname;
 	private long timestamp;
 	private String message;
 
-	public Chat(long senderId, String senderNickname, long timestamp, String message) {
+	public Chat(UUID senderId, String senderNickname, long timestamp, String message) {
 		this.senderId = senderId;
 		this.senderNickname = senderNickname;
 		this.timestamp = timestamp;
@@ -27,17 +30,17 @@ public class Chat implements Message {
 	}
 
 	public Chat(String message) {
-		this(-1, null, System.currentTimeMillis(), message);
+		this(null, null, System.currentTimeMillis(), message);
 	}
 
 	@Override
 	public int getByteCount() {
-		return 2 * Long.BYTES + getByteSize(this.message) + getByteSize(this.senderNickname);
+		return UUID_BYTES + Long.BYTES + getByteSize(this.senderNickname) + getByteSize(this.message);
 	}
 
 	@Override
 	public void write(DataOutputStream o) throws IOException {
-		o.writeLong(this.senderId);
+		writeUUID(this.senderId, o);
 		writeString(this.senderNickname, o);
 		o.writeLong(this.timestamp);
 		writeString(this.message, o);
@@ -45,7 +48,7 @@ public class Chat implements Message {
 
 	@Override
 	public void read(DataInputStream i) throws IOException {
-		this.senderId = i.readLong();
+		this.senderId = readUUID(i);
 		this.senderNickname = readString(i);
 		this.timestamp = i.readLong();
 		this.message = readString(i);
@@ -53,6 +56,6 @@ public class Chat implements Message {
 
 	@Override
 	public String toString() {
-		return String.format("%s(%d): %s", this.senderNickname, this.senderId, this.message);
+		return String.format("%s: %s", this.senderNickname, this.message);
 	}
 }

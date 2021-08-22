@@ -7,11 +7,15 @@ import com.googlecode.lanterna.screen.Screen;
 import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import com.googlecode.lanterna.terminal.Terminal;
+import lombok.Getter;
+import lombok.Setter;
 import nl.andrewl.concord_client.gui.MainWindow;
 import nl.andrewl.concord_core.msg.Message;
+import nl.andrewl.concord_core.msg.MessageUtils;
 import nl.andrewl.concord_core.msg.Serializer;
 import nl.andrewl.concord_core.msg.types.Chat;
 import nl.andrewl.concord_core.msg.types.Identification;
+import nl.andrewl.concord_core.msg.types.ServerMetaData;
 import nl.andrewl.concord_core.msg.types.ServerWelcome;
 
 import java.io.DataInputStream;
@@ -21,14 +25,20 @@ import java.net.Socket;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 public class ConcordClient implements Runnable {
 
 	private final Socket socket;
 	private final DataInputStream in;
 	private final DataOutputStream out;
-	private final long id;
+	private final UUID id;
 	private final String nickname;
+	@Getter
+	@Setter
+	private UUID currentChannelId;
+	@Getter
+	private ServerMetaData serverMetaData;
 	private final Set<ClientMessageListener> messageListeners;
 	private volatile boolean running;
 
@@ -41,6 +51,8 @@ public class ConcordClient implements Runnable {
 		Message reply = Serializer.readMessage(this.in);
 		if (reply instanceof ServerWelcome welcome) {
 			this.id = welcome.getClientId();
+			this.currentChannelId = welcome.getCurrentChannelId();
+			this.serverMetaData = welcome.getMetaData();
 		} else {
 			throw new IOException("Unexpected response from the server after sending identification message.");
 		}
@@ -53,6 +65,10 @@ public class ConcordClient implements Runnable {
 
 	public void removeListener(ClientMessageListener listener) {
 		this.messageListeners.remove(listener);
+	}
+
+	public void sendMessage(Message message) throws IOException {
+		Serializer.writeMessage(message, this.out);
 	}
 
 	public void sendChat(String message) throws IOException {

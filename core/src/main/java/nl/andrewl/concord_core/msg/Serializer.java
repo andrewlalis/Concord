@@ -1,8 +1,6 @@
 package nl.andrewl.concord_core.msg;
 
-import nl.andrewl.concord_core.msg.types.Chat;
-import nl.andrewl.concord_core.msg.types.Identification;
-import nl.andrewl.concord_core.msg.types.ServerWelcome;
+import nl.andrewl.concord_core.msg.types.*;
 
 import java.io.*;
 import java.util.HashMap;
@@ -18,6 +16,9 @@ public class Serializer {
 		registerType(0, Identification.class);
 		registerType(1, ServerWelcome.class);
 		registerType(2, Chat.class);
+		registerType(3, MoveToChannel.class);
+		registerType(4, ChatHistoryRequest.class);
+		registerType(5, ChatHistoryResponse.class);
 	}
 
 	private static void registerType(int id, Class<? extends Message> clazz) {

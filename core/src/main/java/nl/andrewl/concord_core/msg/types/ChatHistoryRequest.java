@@ -7,6 +7,9 @@ import nl.andrewl.concord_core.msg.Message;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.UUID;
+
+import static nl.andrewl.concord_core.msg.MessageUtils.*;
 
 /**
  * A message which clients can send to the server to request some messages from
@@ -46,25 +49,25 @@ import java.io.IOException;
 public class ChatHistoryRequest implements Message {
 	public enum Source {CHANNEL, THREAD, DIRECT_MESSAGE}
 
-	private long sourceId;
+	private UUID sourceId;
 	private Source sourceType;
 	private String query;
 
 	@Override
 	public int getByteCount() {
-		return Long.BYTES + Integer.BYTES + getByteSize(this.query);
+		return UUID_BYTES + Integer.BYTES + getByteSize(this.query);
 	}
 
 	@Override
 	public void write(DataOutputStream o) throws IOException {
-		o.writeLong(sourceId);
+		writeUUID(this.sourceId, o);
 		writeEnum(this.sourceType, o);
 		writeString(this.query, o);
 	}
 
 	@Override
 	public void read(DataInputStream i) throws IOException {
-		this.sourceId = i.readLong();
+		this.sourceId = readUUID(i);
 		this.sourceType = readEnum(Source.class, i);
 		this.query = readString(i);
 	}

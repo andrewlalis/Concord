@@ -1,11 +1,10 @@
 package nl.andrewl.concord_server;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.java.Log;
 import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.Serializer;
-import nl.andrewl.concord_core.msg.types.Chat;
-import nl.andrewl.concord_core.msg.types.ChatHistoryRequest;
 import nl.andrewl.concord_core.msg.types.Identification;
 import nl.andrewl.concord_core.msg.types.ServerWelcome;
 
@@ -13,6 +12,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.util.UUID;
 
 /**
  * This thread is responsible for handling the connection to a single client of
@@ -26,9 +26,15 @@ public class ClientThread extends Thread {
 
 	private final ConcordServer server;
 
-	private Long clientId = null;
+	private UUID clientId = null;
 	@Getter
 	private String clientNickname = null;
+
+	@Getter
+	@Setter
+	private Channel currentChannel;
+
+	private volatile boolean running;
 
 	public ClientThread(Socket socket, ConcordServer server) throws IOException {
 		this.socket = socket;
@@ -54,42 +60,60 @@ public class ClientThread extends Thread {
 		}
 	}
 
+	public void shutdown() {
+		try {
+			this.socket.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		this.running = false;
+	}
+
 	@Override
 	public void run() {
+		this.running = true;
 		if (!identifyClient()) {
 			log.warning("Could not identify the client; aborting connection.");
-			return;
+			this.running = false;
 		}
 
-		while (true) {
+		while (this.running) {
 			try {
 				var msg = Serializer.readMessage(this.in);
-				if (msg instanceof Chat chat) {
-					this.server.handleChat(chat);
-				} else if (msg instanceof ChatHistoryRequest historyRequest) {
-					this.server.handleHistoryRequest(historyRequest, this);
-				}
+				this.server.getEventManager().handle(msg, this);
 			} catch (IOException e) {
 				log.info("Client disconnected: " + e.getMessage());
-				if (this.clientId != null) {
-					this.server.deregisterClient(this.clientId);
-				}
-				break;
+				this.running = false;
 			}
+		}
+
+		if (this.clientId != null) {
+			this.server.deregisterClient(this.clientId);
+		}
+		try {
+			if (!this.socket.isClosed()) {
+				this.socket.close();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 
+	/**
+	 * Initial method that attempts to obtain identification information from a
+	 * newly-connected client. It is the intent that we should close the socket
+	 * if the client is not able to identify itself.
+	 * @return True if we were able to obtain identification from the client, or
+	 * false otherwise.
+	 */
 	private boolean identifyClient() {
 		int attempts = 0;
 		while (attempts < 5) {
 			try {
 				var msg = Serializer.readMessage(this.in);
 				if (msg instanceof Identification id) {
-					this.clientId = this.server.registerClient(this);
 					this.clientNickname = id.getNickname();
-					var reply = new ServerWelcome();
-					reply.setClientId(this.clientId);
-					Serializer.writeMessage(reply, this.out);
+					this.clientId = this.server.registerClient(id, this);
 					return true;
 				}
 			} catch (IOException e) {

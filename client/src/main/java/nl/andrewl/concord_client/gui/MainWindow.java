@@ -55,7 +55,6 @@ public class MainWindow extends BasicWindow {
 			client.addListener(chatPanel);
 			new Thread(client).start();
 			this.setComponent(chatPanel);
-			Borders.joinLinesWithFrame(this.getTextGUI().getScreen().newTextGraphics());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

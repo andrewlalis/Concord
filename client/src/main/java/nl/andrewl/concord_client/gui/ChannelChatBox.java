@@ -1,0 +1,58 @@
+package nl.andrewl.concord_client.gui;
+
+import com.googlecode.lanterna.TerminalSize;
+import com.googlecode.lanterna.gui2.*;
+import com.googlecode.lanterna.input.KeyStroke;
+import com.googlecode.lanterna.input.KeyType;
+import lombok.Getter;
+import nl.andrewl.concord_client.ConcordClient;
+
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+public class ChannelChatBox extends Panel {
+	private final ConcordClient client;
+	private Border chatBorder;
+	@Getter
+	private final ChatList chatList;
+	private final TextBox inputTextBox;
+	public ChannelChatBox(ConcordClient client, Window window) {
+		super(new BorderLayout());
+		this.client = client;
+		this.chatList = new ChatList();
+		this.inputTextBox = new TextBox("", TextBox.Style.MULTI_LINE);
+		this.inputTextBox.setCaretWarp(true);
+		this.inputTextBox.setPreferredSize(new TerminalSize(0, 3));
+
+		window.addWindowListener(new WindowListenerAdapter() {
+			@Override
+			public void onInput(Window basePane, KeyStroke keyStroke, AtomicBoolean deliverEvent) {
+				if (keyStroke.getKeyType() == KeyType.Enter && inputTextBox.isFocused() && !keyStroke.isShiftDown()) {
+					String text = inputTextBox.getText();
+					if (text != null && !text.isBlank()) {
+						try {
+							System.out.println("Sending: " + text.trim());
+							client.sendChat(text.trim());
+							inputTextBox.setText("");
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+					deliverEvent.set(false);
+				}
+			}
+		});
+		this.refreshBorder();
+		this.addComponent(this.inputTextBox, BorderLayout.Location.BOTTOM);
+	}
+
+	public void refreshBorder() {
+		String name = client.getServerMetaData().getChannels().stream()
+				.filter(channelData -> channelData.getId().equals(client.getCurrentChannelId()))
+				.findAny().orElseThrow().getName();
+		if (this.chatBorder != null) this.removeComponent(this.chatBorder);
+		this.chatBorder = Borders.doubleLine("#" + name);
+		this.chatBorder.setComponent(this.chatList);
+		this.addComponent(this.chatBorder, BorderLayout.Location.CENTER);
+	}
+}
