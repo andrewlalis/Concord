@@ -51,7 +51,7 @@ public class MainWindow extends BasicWindow {
 
 		try {
 			var client = new ConcordClient(host, port, nickname);
-			var chatPanel = new ChatPanel(client, this);
+			var chatPanel = new ServerPanel(client, this);
 			client.addListener(chatPanel);
 			new Thread(client).start();
 			this.setComponent(chatPanel);

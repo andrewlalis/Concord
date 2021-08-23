@@ -16,7 +16,7 @@ import java.io.IOException;
  * meta information in the sidebars which provides the user with a list of all
  * threads and users in the server.
  */
-public class ChatPanel extends Panel implements ClientMessageListener {
+public class ServerPanel extends Panel implements ClientMessageListener {
 	@Getter
 	private final ChannelChatBox channelChatBox;
 	private final ChannelList channelList;
@@ -25,7 +25,7 @@ public class ChatPanel extends Panel implements ClientMessageListener {
 	private final ConcordClient client;
 	private final TextGUIThread guiThread;
 
-	public ChatPanel(ConcordClient client, Window window) {
+	public ServerPanel(ConcordClient client, Window window) {
 		super(new BorderLayout());
 		this.guiThread = window.getTextGUI().getGUIThread();
 		this.client = client;
@@ -71,6 +71,12 @@ public class ChatPanel extends Panel implements ClientMessageListener {
 		} else if (message instanceof ChatHistoryResponse chatHistoryResponse) {
 			System.out.println("Got chat history response: " + chatHistoryResponse.getSourceId());
 			System.out.println(chatHistoryResponse.getMessages());
+			this.guiThread.invokeLater(() -> {
+				this.channelChatBox.getChatList().clearItems();
+				for (var chat : chatHistoryResponse.getMessages()) {
+					this.channelChatBox.getChatList().addItem(chat);
+				}
+			});
 		}
 	}
 }
