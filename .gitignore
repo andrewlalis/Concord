@@ -1,2 +1,4 @@
 /.idea
 /target
+/concord-server.db
+/server-config.json
