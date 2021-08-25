@@ -1,7 +1,6 @@
 package nl.andrewl.concord_server;
 
 import lombok.Getter;
-import lombok.extern.java.Log;
 import nl.andrewl.concord_core.msg.types.Identification;
 import nl.andrewl.concord_core.msg.types.ServerMetaData;
 import nl.andrewl.concord_core.msg.types.ServerWelcome;
@@ -61,10 +60,10 @@ public class ConcordServer implements Runnable {
 					this.db.getCollection("channel-" + channelConfig.id())
 			));
 		}
-		this.initDatabase();
+		this.updateDatabase();
 	}
 
-	private void initDatabase() {
+	private void updateDatabase() {
 		for (var channel : this.channelManager.getChannels()) {
 			var col = channel.getMessageCollection();
 			if (!col.hasIndex("timestamp")) {
