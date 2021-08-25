@@ -21,8 +21,8 @@ public class ChatHistoryRequestHandler implements MessageHandler<ChatHistoryRequ
 		if (optionalChannel.isPresent()) {
 			var channel = optionalChannel.get();
 			var params = msg.getQueryAsMap();
-			Long count = this.getOrDefault(params, "count", (long) server.getConfig().chatHistoryDefaultCount());
-			if (count > server.getConfig().chatHistoryMaxCount()) {
+			Long count = this.getOrDefault(params, "count", (long) server.getConfig().getChatHistoryDefaultCount());
+			if (count > server.getConfig().getChatHistoryMaxCount()) {
 				return;
 			}
 			Long from = this.getOrDefault(params, "from", null);

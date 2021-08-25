@@ -1,31 +1,43 @@
 package nl.andrewl.concord_server.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.java.Log;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import nl.andrewl.concord_server.IdProvider;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
-public record ServerConfig(
-		String name,
-		int port,
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public final class ServerConfig {
+	private String name;
+	private int port;
+	private int chatHistoryMaxCount;
+	private int chatHistoryDefaultCount;
+	private int maxMessageLength;
+	private List<ChannelConfig> channels;
 
-		// Global Channel configuration
-		int chatHistoryMaxCount,
-		int chatHistoryDefaultCount,
-		int maxMessageLength,
+	/**
+	 * The path at which this config is stored.
+	 */
+	@JsonIgnore
+	private transient Path filePath;
 
-		ChannelConfig[] channels
-) {
-
-	public static record ChannelConfig (
-			String id,
-			String name,
-			String description
-	) {}
+	@Data
+	@NoArgsConstructor
+	@AllArgsConstructor
+	public static final class ChannelConfig {
+		private String id;
+		private String name;
+		private String description;
+	}
 
 	public static ServerConfig loadOrCreate(Path filePath, IdProvider idProvider) {
 		ObjectMapper mapper = new ObjectMapper();
@@ -37,9 +49,8 @@ public record ServerConfig(
 					100,
 					50,
 					8192,
-					new ServerConfig.ChannelConfig[]{
-							new ServerConfig.ChannelConfig(idProvider.newId().toString(), "general", "Default channel for general discussion.")
-					}
+					List.of(new ChannelConfig(idProvider.newId().toString(), "general", "Default channel for general discussion.")),
+					filePath
 			);
 			try (var out = Files.newOutputStream(filePath)) {
 				mapper.writerWithDefaultPrettyPrinter().writeValue(out, config);
@@ -50,11 +61,19 @@ public record ServerConfig(
 		} else {
 			try {
 				config = mapper.readValue(Files.newInputStream(filePath), ServerConfig.class);
+				config.setFilePath(filePath);
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
 			}
 			System.out.println("Loaded configuration from " + filePath);
 		}
 		return config;
+	}
+
+	public void save() throws IOException {
+		ObjectMapper mapper = new ObjectMapper();
+		try (var out = Files.newOutputStream(filePath)) {
+			mapper.writerWithDefaultPrettyPrinter().writeValue(out, this);
+		}
 	}
 }

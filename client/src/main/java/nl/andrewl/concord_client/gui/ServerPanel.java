@@ -4,7 +4,8 @@ import com.googlecode.lanterna.gui2.*;
 import lombok.Getter;
 import nl.andrewl.concord_client.ConcordClient;
 import nl.andrewl.concord_client.event.ClientModelListener;
-import nl.andrewl.concord_core.msg.types.ChannelUsersResponse;
+import nl.andrewl.concord_core.msg.types.ServerMetaData;
+import nl.andrewl.concord_core.msg.types.UserData;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,11 +23,8 @@ public class ServerPanel extends Panel implements ClientModelListener {
 	private final ChannelList channelList;
 	private final UserList userList;
 
-	private final TextGUIThread guiThread;
-
 	public ServerPanel(ConcordClient client, Window window) {
 		super(new BorderLayout());
-		this.guiThread = window.getTextGUI().getGUIThread();
 		this.channelChatBox = new ChannelChatBox(client, window);
 		this.channelList = new ChannelList(client);
 		this.channelList.setChannels();
@@ -55,9 +53,16 @@ public class ServerPanel extends Panel implements ClientModelListener {
 	}
 
 	@Override
-	public void usersUpdated(List<ChannelUsersResponse.UserData> users) {
-		this.guiThread.invokeLater(() -> {
+	public void usersUpdated(List<UserData> users) {
+		this.getTextGUI().getGUIThread().invokeLater(() -> {
 			this.userList.updateUsers(users);
+		});
+	}
+
+	@Override
+	public void serverMetaDataUpdated(ServerMetaData metaData) {
+		this.getTextGUI().getGUIThread().invokeLater(() -> {
+			this.channelList.setChannels();
 		});
 	}
 }

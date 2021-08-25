@@ -2,8 +2,8 @@ package nl.andrewl.concord_client.model;
 
 import lombok.Getter;
 import nl.andrewl.concord_client.event.ClientModelListener;
-import nl.andrewl.concord_core.msg.types.ChannelUsersResponse;
 import nl.andrewl.concord_core.msg.types.ServerMetaData;
+import nl.andrewl.concord_core.msg.types.UserData;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +17,7 @@ public class ClientModel {
 	private ServerMetaData serverMetaData;
 
 	private UUID currentChannelId;
-	private List<ChannelUsersResponse.UserData> knownUsers;
+	private List<UserData> knownUsers;
 	private final ChatHistory chatHistory;
 
 	private final List<ClientModelListener> modelListeners;
@@ -38,9 +38,14 @@ public class ClientModel {
 		this.modelListeners.forEach(listener -> listener.channelMoved(oldId, newChannelId));
 	}
 
-	public void setKnownUsers(List<ChannelUsersResponse.UserData> users) {
+	public void setKnownUsers(List<UserData> users) {
 		this.knownUsers = users;
 		this.modelListeners.forEach(listener -> listener.usersUpdated(this.knownUsers));
+	}
+
+	public void setServerMetaData(ServerMetaData metaData) {
+		this.serverMetaData = metaData;
+		this.modelListeners.forEach(listener -> listener.serverMetaDataUpdated(metaData));
 	}
 
 	public void addListener(ClientModelListener listener) {

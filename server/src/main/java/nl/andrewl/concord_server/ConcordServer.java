@@ -1,19 +1,24 @@
 package nl.andrewl.concord_server;
 
 import lombok.Getter;
+import nl.andrewl.concord_core.msg.Message;
+import nl.andrewl.concord_core.msg.Serializer;
 import nl.andrewl.concord_core.msg.types.Identification;
 import nl.andrewl.concord_core.msg.types.ServerMetaData;
 import nl.andrewl.concord_core.msg.types.ServerWelcome;
+import nl.andrewl.concord_core.msg.types.UserData;
+import nl.andrewl.concord_server.cli.ServerCli;
 import nl.andrewl.concord_server.config.ServerConfig;
-import org.dizitart.no2.IndexOptions;
-import org.dizitart.no2.IndexType;
 import org.dizitart.no2.Nitrite;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,32 +57,13 @@ public class ConcordServer implements Runnable {
 		this.executorService = Executors.newCachedThreadPool();
 		this.eventManager = new EventManager(this);
 		this.channelManager = new ChannelManager(this);
-		for (var channelConfig : config.channels()) {
+		for (var channelConfig : config.getChannels()) {
 			this.channelManager.addChannel(new Channel(
 					this,
-					UUID.fromString(channelConfig.id()),
-					channelConfig.name(),
-					this.db.getCollection("channel-" + channelConfig.id())
+					UUID.fromString(channelConfig.getId()),
+					channelConfig.getName(),
+					this.db.getCollection("channel-" + channelConfig.getId())
 			));
-		}
-		this.updateDatabase();
-	}
-
-	private void updateDatabase() {
-		for (var channel : this.channelManager.getChannels()) {
-			var col = channel.getMessageCollection();
-			if (!col.hasIndex("timestamp")) {
-				System.out.println("Adding timestamp index to collection for channel " + channel.getName());
-				col.createIndex("timestamp", IndexOptions.indexOptions(IndexType.NonUnique));
-			}
-			if (!col.hasIndex("senderNickname")) {
-				System.out.println("Adding senderNickname index to collection for channel " + channel.getName());
-				col.createIndex("senderNickname", IndexOptions.indexOptions(IndexType.Fulltext));
-			}
-			if (!col.hasIndex("message")) {
-				System.out.println("Adding message index to collection for channel " + channel.getName());
-				col.createIndex("message", IndexOptions.indexOptions(IndexType.Fulltext));
-			}
 		}
 	}
 
@@ -96,17 +82,9 @@ public class ConcordServer implements Runnable {
 		this.clients.put(id, clientThread);
 		clientThread.setClientId(id);
 		clientThread.setClientNickname(identification.getNickname());
-		// Send a welcome reply containing all the initial server info the client needs.
-		ServerMetaData metaData = new ServerMetaData(
-				this.config.name(),
-				this.channelManager.getChannels().stream()
-						.map(channel -> new ServerMetaData.ChannelData(channel.getId(), channel.getName()))
-						.sorted(Comparator.comparing(ServerMetaData.ChannelData::getName))
-						.collect(Collectors.toList())
-		);
 		// Immediately add the client to the default channel and send the initial welcome message.
 		var defaultChannel = this.channelManager.getChannelByName("general").orElseThrow();
-		clientThread.sendToClient(new ServerWelcome(id, defaultChannel.getId(), metaData));
+		clientThread.sendToClient(new ServerWelcome(id, defaultChannel.getId(), this.getMetaData()));
 		// It is important that we send the welcome message first. The client expects this as the initial response to their identification message.
 		defaultChannel.addClient(clientThread);
 		clientThread.setCurrentChannel(defaultChannel);
@@ -127,14 +105,52 @@ public class ConcordServer implements Runnable {
 		}
 	}
 
+	public boolean isRunning() {
+		return running;
+	}
+
+	public List<UserData> getClients() {
+		return this.clients.values().stream()
+				.sorted(Comparator.comparing(ClientThread::getClientNickname))
+				.map(ClientThread::toData)
+				.collect(Collectors.toList());
+	}
+
+	public ServerMetaData getMetaData() {
+		return new ServerMetaData(
+				this.config.getName(),
+				this.channelManager.getChannels().stream()
+						.map(channel -> new ServerMetaData.ChannelData(channel.getId(), channel.getName()))
+						.sorted(Comparator.comparing(ServerMetaData.ChannelData::getName))
+						.collect(Collectors.toList())
+		);
+	}
+
+	/**
+	 * Sends a message to every connected client.
+	 * @param message The message to send.
+	 */
+	public void broadcast(Message message) {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream(message.getByteCount());
+		try {
+			Serializer.writeMessage(message, baos);
+			byte[] data = baos.toByteArray();
+			for (var client : this.clients.values()) {
+				client.sendToClient(data);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
 	@Override
 	public void run() {
 		this.running = true;
 		ServerSocket serverSocket;
 		try {
-			serverSocket = new ServerSocket(this.config.port());
+			serverSocket = new ServerSocket(this.config.getPort());
 			StringBuilder startupMessage = new StringBuilder();
-			startupMessage.append("Opened server on port ").append(config.port()).append("\n");
+			startupMessage.append("Opened server on port ").append(config.getPort()).append("\n");
 			for (var channel : this.channelManager.getChannels()) {
 				startupMessage.append("\tChannel \"").append(channel).append('\n');
 			}
@@ -151,6 +167,7 @@ public class ConcordServer implements Runnable {
 
 	public static void main(String[] args) {
 		var server = new ConcordServer();
-		server.run();
+		new Thread(server).start();
+		new ServerCli(server).run();
 	}
 }

@@ -12,6 +12,7 @@ import nl.andrewl.concord_client.event.EventManager;
 import nl.andrewl.concord_client.event.handlers.ChannelMovedHandler;
 import nl.andrewl.concord_client.event.handlers.ChannelUsersResponseHandler;
 import nl.andrewl.concord_client.event.handlers.ChatHistoryResponseHandler;
+import nl.andrewl.concord_client.event.handlers.ServerMetaDataHandler;
 import nl.andrewl.concord_client.gui.MainWindow;
 import nl.andrewl.concord_client.model.ClientModel;
 import nl.andrewl.concord_core.msg.Message;
@@ -57,6 +58,7 @@ public class ConcordClient implements Runnable {
 		this.eventManager.addHandler(ChannelUsersResponse.class, new ChannelUsersResponseHandler());
 		this.eventManager.addHandler(ChatHistoryResponse.class, new ChatHistoryResponseHandler());
 		this.eventManager.addHandler(Chat.class, (msg, client) -> client.getModel().getChatHistory().addChat(msg));
+		this.eventManager.addHandler(ServerMetaData.class, new ServerMetaDataHandler());
 	}
 
 	public void sendMessage(Message message) throws IOException {

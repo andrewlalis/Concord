@@ -6,6 +6,7 @@ import com.googlecode.lanterna.gui2.LinearLayout;
 import com.googlecode.lanterna.gui2.Panel;
 import nl.andrewl.concord_client.ConcordClient;
 import nl.andrewl.concord_core.msg.types.ChannelUsersResponse;
+import nl.andrewl.concord_core.msg.types.UserData;
 
 import java.util.List;
 
@@ -17,7 +18,7 @@ public class UserList extends Panel {
 		this.client = client;
 	}
 
-	public void updateUsers(List<ChannelUsersResponse.UserData> usersResponse) {
+	public void updateUsers(List<UserData> usersResponse) {
 		this.removeAllComponents();
 		for (var user : usersResponse) {
 			Button b = new Button(user.getName(), () -> {

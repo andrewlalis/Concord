@@ -5,6 +5,7 @@ import lombok.Setter;
 import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.Serializer;
 import nl.andrewl.concord_core.msg.types.Identification;
+import nl.andrewl.concord_core.msg.types.UserData;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -120,6 +121,10 @@ public class ClientThread extends Thread {
 			attempts++;
 		}
 		return false;
+	}
+
+	public UserData toData() {
+		return new UserData(this.clientId, this.clientNickname);
 	}
 
 	@Override
