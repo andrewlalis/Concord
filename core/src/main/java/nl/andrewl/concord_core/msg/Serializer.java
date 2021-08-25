@@ -1,5 +1,6 @@
 package nl.andrewl.concord_core.msg;
 
+import nl.andrewl.concord_core.msg.types.Error;
 import nl.andrewl.concord_core.msg.types.*;
 
 import java.io.*;
@@ -22,6 +23,7 @@ public class Serializer {
 		registerType(6, ChannelUsersRequest.class);
 		registerType(7, ChannelUsersResponse.class);
 		registerType(8, ServerMetaData.class);
+		registerType(9, Error.class);
 	}
 
 	private static void registerType(int id, Class<? extends Message> clazz) {

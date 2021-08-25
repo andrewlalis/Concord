@@ -12,13 +12,16 @@ public class AddChannelCommand implements ServerCliCommand {
 	public void handle(ConcordServer server, String[] args) throws Exception {
 		if (args.length < 1) {
 			System.err.println("Missing required name argument.");
+			return;
 		}
 		String name = args[0].trim().toLowerCase().replaceAll("\\s+", "-");
 		if (name.isBlank()) {
 			System.err.println("Cannot create channel with blank name.");
+			return;
 		}
 		if (server.getChannelManager().getChannelByName(name).isPresent()) {
 			System.err.println("Channel with that name already exists.");
+			return;
 		}
 		String description = null;
 		if (args.length > 1) {

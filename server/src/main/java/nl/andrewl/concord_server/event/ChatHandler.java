@@ -1,6 +1,7 @@
 package nl.andrewl.concord_server.event;
 
 import nl.andrewl.concord_core.msg.types.Chat;
+import nl.andrewl.concord_core.msg.types.Error;
 import nl.andrewl.concord_server.ClientThread;
 import nl.andrewl.concord_server.ConcordServer;
 import org.dizitart.no2.Document;
@@ -11,6 +12,10 @@ import java.util.Map;
 public class ChatHandler implements MessageHandler<Chat> {
 	@Override
 	public void handle(Chat msg, ClientThread client, ConcordServer server) throws IOException {
+		if (msg.getMessage().length() > server.getConfig().getMaxMessageLength()) {
+			client.getCurrentChannel().sendMessage(Error.warning("Message is too long."));
+			return;
+		}
 		server.getExecutorService().submit(() -> {
 			var collection = client.getCurrentChannel().getMessageCollection();
 			Document doc = new Document(Map.of(
