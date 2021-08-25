@@ -2,7 +2,6 @@ package nl.andrewl.concord_server;
 
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.java.Log;
 import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.Serializer;
 import nl.andrewl.concord_core.msg.types.Identification;
@@ -17,7 +16,6 @@ import java.util.UUID;
  * This thread is responsible for handling the connection to a single client of
  * a server. The client thread acts as the server's representation of a client.
  */
-@Log
 public class ClientThread extends Thread {
 	private final Socket socket;
 	private final DataInputStream in;
@@ -75,7 +73,7 @@ public class ClientThread extends Thread {
 	public void run() {
 		this.running = true;
 		if (!identifyClient()) {
-			log.warning("Could not identify the client; aborting connection.");
+			System.err.println("Could not identify the client; aborting connection.");
 			this.running = false;
 		}
 
@@ -84,7 +82,6 @@ public class ClientThread extends Thread {
 				var msg = Serializer.readMessage(this.in);
 				this.server.getEventManager().handle(msg, this);
 			} catch (IOException e) {
-				log.info("Client disconnected: " + e.getMessage());
 				this.running = false;
 			}
 		}
@@ -123,5 +120,10 @@ public class ClientThread extends Thread {
 			attempts++;
 		}
 		return false;
+	}
+
+	@Override
+	public String toString() {
+		return this.clientNickname + " (" + this.clientId + ")";
 	}
 }

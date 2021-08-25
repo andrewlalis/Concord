@@ -58,4 +58,16 @@ public class Chat implements Message {
 	public String toString() {
 		return String.format("%s: %s", this.senderNickname, this.message);
 	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (o.getClass().equals(this.getClass())) {
+			Chat other = (Chat) o;
+			return this.getSenderId().equals(other.getSenderId()) &&
+					this.getTimestamp() == other.getTimestamp() &&
+					this.getSenderNickname().equals(other.getSenderNickname()) &&
+					this.message.length() == other.message.length();
+		}
+		return false;
+	}
 }

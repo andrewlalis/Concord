@@ -6,6 +6,10 @@ import nl.andrewl.concord_core.msg.types.MoveToChannel;
 
 import java.io.IOException;
 
+/**
+ * Panel that contains a list of channels. A user can interact with a channel to
+ * move to that channel. The current channel is indicated via a "*".
+ */
 public class ChannelList extends Panel {
 	private final ConcordClient client;
 	public ChannelList(ConcordClient client) {
@@ -15,13 +19,13 @@ public class ChannelList extends Panel {
 
 	public void setChannels() {
 		this.removeAllComponents();
-		for (var channel : this.client.getServerMetaData().getChannels()) {
+		for (var channel : this.client.getModel().getServerMetaData().getChannels()) {
 			String name = channel.getName();
-			if (client.getCurrentChannelId().equals(channel.getId())) {
+			if (client.getModel().getCurrentChannelId().equals(channel.getId())) {
 				name = "*" + name;
 			}
 			Button b = new Button(name, () -> {
-				if (!client.getCurrentChannelId().equals(channel.getId())) {
+				if (!client.getModel().getCurrentChannelId().equals(channel.getId())) {
 					try {
 						client.sendMessage(new MoveToChannel(channel.getId()));
 					} catch (IOException e) {

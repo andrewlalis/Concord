@@ -22,16 +22,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
-@Log
+/**
+ * The main server implementation, which handles accepting new clients.
+ */
 public class ConcordServer implements Runnable {
 	private final Map<UUID, ClientThread> clients;
-	private final int port;
-	private final String name;
+	private volatile boolean running;
+
+	@Getter
+	private final ServerConfig config;
 	@Getter
 	private final IdProvider idProvider;
 	@Getter
 	private final Nitrite db;
-	private volatile boolean running;
 	@Getter
 	private final ExecutorService executorService;
 	@Getter
@@ -41,9 +44,7 @@ public class ConcordServer implements Runnable {
 
 	public ConcordServer() {
 		this.idProvider = new UUIDProvider();
-		ServerConfig config = ServerConfig.loadOrCreate(Path.of("server-config.json"), idProvider);
-		this.port = config.port();
-		this.name = config.name();
+		this.config = ServerConfig.loadOrCreate(Path.of("server-config.json"), idProvider);
 		this.db = Nitrite.builder()
 				.filePath("concord-server.db")
 				.openOrCreate();
@@ -67,15 +68,15 @@ public class ConcordServer implements Runnable {
 		for (var channel : this.channelManager.getChannels()) {
 			var col = channel.getMessageCollection();
 			if (!col.hasIndex("timestamp")) {
-				log.info("Adding timestamp index to collection for channel " + channel.getName());
+				System.out.println("Adding timestamp index to collection for channel " + channel.getName());
 				col.createIndex("timestamp", IndexOptions.indexOptions(IndexType.NonUnique));
 			}
 			if (!col.hasIndex("senderNickname")) {
-				log.info("Adding senderNickname index to collection for channel " + channel.getName());
+				System.out.println("Adding senderNickname index to collection for channel " + channel.getName());
 				col.createIndex("senderNickname", IndexOptions.indexOptions(IndexType.Fulltext));
 			}
 			if (!col.hasIndex("message")) {
-				log.info("Adding message index to collection for channel " + channel.getName());
+				System.out.println("Adding message index to collection for channel " + channel.getName());
 				col.createIndex("message", IndexOptions.indexOptions(IndexType.Fulltext));
 			}
 		}
@@ -92,13 +93,13 @@ public class ConcordServer implements Runnable {
 	 */
 	public void registerClient(Identification identification, ClientThread clientThread) {
 		var id = this.idProvider.newId();
-		log.info("Registering new client " + identification.getNickname() + " with id " + id);
+		System.out.printf("Client \"%s\" joined with id %s.\n", identification.getNickname(), id);
 		this.clients.put(id, clientThread);
 		clientThread.setClientId(id);
 		clientThread.setClientNickname(identification.getNickname());
 		// Send a welcome reply containing all the initial server info the client needs.
 		ServerMetaData metaData = new ServerMetaData(
-				this.name,
+				this.config.name(),
 				this.channelManager.getChannels().stream()
 						.map(channel -> new ServerMetaData.ChannelData(channel.getId(), channel.getName()))
 						.sorted(Comparator.comparing(ServerMetaData.ChannelData::getName))
@@ -110,6 +111,7 @@ public class ConcordServer implements Runnable {
 		// It is important that we send the welcome message first. The client expects this as the initial response to their identification message.
 		defaultChannel.addClient(clientThread);
 		clientThread.setCurrentChannel(defaultChannel);
+		System.out.println("Moved client " + clientThread + " to " + defaultChannel);
 	}
 
 	/**
@@ -122,6 +124,7 @@ public class ConcordServer implements Runnable {
 		if (client != null) {
 			client.getCurrentChannel().removeClient(client);
 			client.shutdown();
+			System.out.println("Client " + client + " has disconnected.");
 		}
 	}
 
@@ -130,11 +133,15 @@ public class ConcordServer implements Runnable {
 		this.running = true;
 		ServerSocket serverSocket;
 		try {
-			serverSocket = new ServerSocket(this.port);
-			log.info("Opened server on port " + this.port);
+			serverSocket = new ServerSocket(this.config.port());
+			StringBuilder startupMessage = new StringBuilder();
+			startupMessage.append("Opened server on port ").append(config.port()).append("\n");
+			for (var channel : this.channelManager.getChannels()) {
+				startupMessage.append("\tChannel \"").append(channel).append('\n');
+			}
+			System.out.println(startupMessage);
 			while (this.running) {
 				Socket socket = serverSocket.accept();
-				log.info("Accepted new socket connection from " + socket.getInetAddress().getHostAddress());
 				ClientThread clientThread = new ClientThread(socket, this);
 				clientThread.start();
 			}

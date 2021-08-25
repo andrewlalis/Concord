@@ -49,6 +49,6 @@ public class ChannelManager {
 		channel.addClient(client);
 		client.setCurrentChannel(channel);
 		client.sendToClient(new MoveToChannel(channel.getId()));
-		System.out.println("Moved client " + client.getClientNickname() + " to channel " + channel.getName());
+		System.out.println("Moved client " + client + " to channel " + channel);
 	}
 }

@@ -8,8 +8,12 @@ import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import com.googlecode.lanterna.terminal.Terminal;
 import lombok.Getter;
-import lombok.Setter;
+import nl.andrewl.concord_client.event.EventManager;
+import nl.andrewl.concord_client.event.handlers.ChannelMovedHandler;
+import nl.andrewl.concord_client.event.handlers.ChannelUsersResponseHandler;
+import nl.andrewl.concord_client.event.handlers.ChatHistoryResponseHandler;
 import nl.andrewl.concord_client.gui.MainWindow;
+import nl.andrewl.concord_client.model.ClientModel;
 import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.Serializer;
 import nl.andrewl.concord_core.msg.types.*;
@@ -18,52 +22,41 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 
 public class ConcordClient implements Runnable {
 	private final Socket socket;
 	private final DataInputStream in;
 	private final DataOutputStream out;
-	private final UUID id;
-	private final String nickname;
+
 	@Getter
-	@Setter
-	private UUID currentChannelId;
-	@Getter
-	private ServerMetaData serverMetaData;
-	private final Set<ClientMessageListener> messageListeners;
+	private final ClientModel model;
+
+	private final EventManager eventManager;
+
 	private volatile boolean running;
 
 	public ConcordClient(String host, int port, String nickname) throws IOException {
+		this.eventManager = new EventManager(this);
 		this.socket = new Socket(host, port);
 		this.in = new DataInputStream(this.socket.getInputStream());
 		this.out = new DataOutputStream(this.socket.getOutputStream());
-		this.nickname = nickname;
 		Serializer.writeMessage(new Identification(nickname), this.out);
 		Message reply = Serializer.readMessage(this.in);
 		if (reply instanceof ServerWelcome welcome) {
-			this.id = welcome.getClientId();
-			this.currentChannelId = welcome.getCurrentChannelId();
-			this.serverMetaData = welcome.getMetaData();
-
+			this.model = new ClientModel(welcome.getClientId(), nickname, welcome.getCurrentChannelId(), welcome.getMetaData());
 			// Start fetching initial data for the channel we were initially put into.
-			this.sendMessage(new ChannelUsersRequest(this.currentChannelId));
-			this.sendMessage(new ChatHistoryRequest(this.currentChannelId, ChatHistoryRequest.Source.CHANNEL, ""));
+			this.sendMessage(new ChannelUsersRequest(this.model.getCurrentChannelId()));
+			this.sendMessage(new ChatHistoryRequest(this.model.getCurrentChannelId(), ""));
 		} else {
 			throw new IOException("Unexpected response from the server after sending identification message.");
 		}
-		this.messageListeners = new HashSet<>();
-	}
 
-	public void addListener(ClientMessageListener listener) {
-		this.messageListeners.add(listener);
-	}
-
-	public void removeListener(ClientMessageListener listener) {
-		this.messageListeners.remove(listener);
+		// Add event listeners.
+		this.eventManager.addHandler(MoveToChannel.class, new ChannelMovedHandler());
+		this.eventManager.addHandler(ChannelUsersResponse.class, new ChannelUsersResponseHandler());
+		this.eventManager.addHandler(ChatHistoryResponse.class, new ChatHistoryResponseHandler());
+		this.eventManager.addHandler(Chat.class, (msg, client) -> client.getModel().getChatHistory().addChat(msg));
 	}
 
 	public void sendMessage(Message message) throws IOException {
@@ -71,7 +64,7 @@ public class ConcordClient implements Runnable {
 	}
 
 	public void sendChat(String message) throws IOException {
-		Serializer.writeMessage(new Chat(this.id, this.nickname, System.currentTimeMillis(), message), this.out);
+		Serializer.writeMessage(new Chat(this.model.getId(), this.model.getNickname(), System.currentTimeMillis(), message), this.out);
 	}
 
 	public void shutdown() {
@@ -91,9 +84,7 @@ public class ConcordClient implements Runnable {
 		while (this.running) {
 			try {
 				Message msg = Serializer.readMessage(this.in);
-				for (var listener : this.messageListeners) {
-					listener.messageReceived(this, msg);
-				}
+				this.eventManager.handle(msg);
 			} catch (IOException e) {
 				e.printStackTrace();
 				this.running = false;

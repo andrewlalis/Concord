@@ -1,9 +1,15 @@
 package nl.andrewl.concord_client.gui;
 
 import com.googlecode.lanterna.gui2.AbstractListBox;
+import nl.andrewl.concord_client.event.ChatHistoryListener;
+import nl.andrewl.concord_client.model.ChatHistory;
 import nl.andrewl.concord_core.msg.types.Chat;
 
-public class ChatList extends AbstractListBox<Chat, ChatList> {
+/**
+ * This chat list shows a section of chat messages that have been sent in a
+ * single channel (server channel, thread, or direct message).
+ */
+public class ChatList extends AbstractListBox<Chat, ChatList> implements ChatHistoryListener {
 	/**
 	 * Adds one more item to the list box, at the end.
 	 *
@@ -27,5 +33,32 @@ public class ChatList extends AbstractListBox<Chat, ChatList> {
 	@Override
 	protected ListItemRenderer<Chat, ChatList> createDefaultListItemRenderer() {
 		return new ChatRenderer();
+	}
+
+	@Override
+	public void chatAdded(Chat chat) {
+		this.getTextGUI().getGUIThread().invokeLater(() -> {
+			this.addItem(chat);
+		});
+	}
+
+	@Override
+	public void chatRemoved(Chat chat) {
+		for (int i = 0; i < this.getItemCount(); i++) {
+			if (this.getItemAt(i).equals(chat)) {
+				this.removeItem(i);
+				return;
+			}
+		}
+	}
+
+	@Override
+	public void chatUpdated(ChatHistory history) {
+		this.getTextGUI().getGUIThread().invokeLater(() -> {
+			this.clearItems();
+			for (var chat : history.getChats()) {
+				this.addItem(chat);
+			}
+		});
 	}
 }

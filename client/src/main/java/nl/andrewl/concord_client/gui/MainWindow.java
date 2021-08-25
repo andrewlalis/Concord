@@ -52,7 +52,7 @@ public class MainWindow extends BasicWindow {
 		try {
 			var client = new ConcordClient(host, port, nickname);
 			var chatPanel = new ServerPanel(client, this);
-			client.addListener(chatPanel);
+			client.getModel().addListener(chatPanel);
 			new Thread(client).start();
 			this.setComponent(chatPanel);
 		} catch (IOException e) {

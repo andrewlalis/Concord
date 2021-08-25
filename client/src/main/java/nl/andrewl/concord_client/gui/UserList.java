@@ -7,6 +7,8 @@ import com.googlecode.lanterna.gui2.Panel;
 import nl.andrewl.concord_client.ConcordClient;
 import nl.andrewl.concord_core.msg.types.ChannelUsersResponse;
 
+import java.util.List;
+
 public class UserList extends Panel {
 	private final ConcordClient client;
 
@@ -15,9 +17,9 @@ public class UserList extends Panel {
 		this.client = client;
 	}
 
-	public void updateUsers(ChannelUsersResponse usersResponse) {
+	public void updateUsers(List<ChannelUsersResponse.UserData> usersResponse) {
 		this.removeAllComponents();
-		for (var user : usersResponse.getUsers()) {
+		for (var user : usersResponse) {
 			Button b = new Button(user.getName(), () -> {
 				System.out.println("Opening DM channel with user " + user.getName() + ", id: " + user.getId());
 			});

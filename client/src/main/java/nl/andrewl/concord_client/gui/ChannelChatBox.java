@@ -26,6 +26,7 @@ public class ChannelChatBox extends Panel {
 		super(new BorderLayout());
 		this.client = client;
 		this.chatList = new ChatList();
+		this.client.getModel().getChatHistory().addListener(this.chatList);
 		this.inputTextBox = new TextBox("", TextBox.Style.MULTI_LINE);
 		this.inputTextBox.setCaretWarp(true);
 		this.inputTextBox.setPreferredSize(new TerminalSize(0, 3));
@@ -37,7 +38,6 @@ public class ChannelChatBox extends Panel {
 					String text = inputTextBox.getText();
 					if (text != null && !text.isBlank()) {
 						try {
-							System.out.println("Sending: " + text.trim());
 							client.sendChat(text.trim());
 							inputTextBox.setText("");
 						} catch (IOException e) {
@@ -53,8 +53,8 @@ public class ChannelChatBox extends Panel {
 	}
 
 	public void refreshBorder() {
-		String name = client.getServerMetaData().getChannels().stream()
-				.filter(channelData -> channelData.getId().equals(client.getCurrentChannelId()))
+		String name = client.getModel().getServerMetaData().getChannels().stream()
+				.filter(channelData -> channelData.getId().equals(client.getModel().getCurrentChannelId()))
 				.findAny().orElseThrow().getName();
 		if (this.chatBorder != null) this.removeComponent(this.chatBorder);
 		this.chatBorder = Borders.doubleLine("#" + name);

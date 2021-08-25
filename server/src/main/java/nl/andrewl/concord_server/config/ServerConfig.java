@@ -9,10 +9,15 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-@Log
 public record ServerConfig(
 		String name,
 		int port,
+
+		// Global Channel configuration
+		int chatHistoryMaxCount,
+		int chatHistoryDefaultCount,
+		int maxMessageLength,
+
 		ChannelConfig[] channels
 ) {
 
@@ -29,6 +34,9 @@ public record ServerConfig(
 			config = new ServerConfig(
 					"My Concord Server",
 					8123,
+					100,
+					50,
+					8192,
 					new ServerConfig.ChannelConfig[]{
 							new ServerConfig.ChannelConfig(idProvider.newId().toString(), "general", "Default channel for general discussion.")
 					}
@@ -38,14 +46,14 @@ public record ServerConfig(
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
 			}
-			log.info(filePath + " does not exist. Creating it with initial values. Edit and restart to apply changes.");
+			System.err.println(filePath + " does not exist. Creating it with initial values. Edit and restart to apply changes.");
 		} else {
 			try {
 				config = mapper.readValue(Files.newInputStream(filePath), ServerConfig.class);
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
 			}
-			log.info("Loaded configuration from " + filePath);
+			System.out.println("Loaded configuration from " + filePath);
 		}
 		return config;
 	}

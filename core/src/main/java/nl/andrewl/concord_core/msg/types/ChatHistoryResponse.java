@@ -20,13 +20,12 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChatHistoryResponse implements Message {
-	private UUID sourceId;
-	private ChatHistoryRequest.Source sourceType;
+	private UUID channelId;
 	List<Chat> messages;
 
 	@Override
 	public int getByteCount() {
-		int count = Long.BYTES + Integer.BYTES + Integer.BYTES;
+		int count = Long.BYTES + Integer.BYTES;
 		for (var message : this.messages) {
 			count += message.getByteCount();
 		}
@@ -35,8 +34,7 @@ public class ChatHistoryResponse implements Message {
 
 	@Override
 	public void write(DataOutputStream o) throws IOException {
-		MessageUtils.writeUUID(this.sourceId, o);
-		MessageUtils.writeEnum(this.sourceType, o);
+		MessageUtils.writeUUID(this.channelId, o);
 		o.writeInt(messages.size());
 		for (var message : this.messages) {
 			message.write(o);
@@ -45,8 +43,7 @@ public class ChatHistoryResponse implements Message {
 
 	@Override
 	public void read(DataInputStream i) throws IOException {
-		this.sourceId = MessageUtils.readUUID(i);
-		this.sourceType = MessageUtils.readEnum(ChatHistoryRequest.Source.class, i);
+		this.channelId = MessageUtils.readUUID(i);
 		int messageCount = i.readInt();
 		Chat[] messages = new Chat[messageCount];
 		for (int k = 0; k < messageCount; k++) {

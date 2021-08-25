@@ -8,7 +8,10 @@ import nl.andrewl.concord_core.msg.Message;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static nl.andrewl.concord_core.msg.MessageUtils.*;
 
@@ -49,11 +52,35 @@ import static nl.andrewl.concord_core.msg.MessageUtils.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChatHistoryRequest implements Message {
-	public enum Source {CHANNEL, THREAD, DIRECT_MESSAGE}
-
-	private UUID sourceId;
-	private Source sourceType;
+	private UUID channelId;
 	private String query;
+
+	public ChatHistoryRequest(UUID channelId, Map<String, String> params) {
+		this.channelId = channelId;
+		this.query = params.entrySet().stream()
+				.map(entry -> {
+					if (entry.getKey().contains(";") || entry.getKey().contains("=")) {
+						throw new IllegalArgumentException("Parameter key \"" + entry.getKey() + "\" contains invalid characters.");
+					}
+					if (entry.getValue().contains(";") || entry.getValue().contains("=")) {
+						throw new IllegalArgumentException("Parameter value \"" + entry.getValue() + "\" contains invalid characters.");
+					}
+					return entry.getKey() + "=" + entry.getValue();
+				})
+				.collect(Collectors.joining(";"));
+	}
+
+	public Map<String, String> getQueryAsMap() {
+		String[] pairs = this.query.split(";");
+		if (pairs.length == 0) return Map.of();
+		Map<String, String> params = new HashMap<>(pairs.length);
+		for (var pair : pairs) {
+			String[] keyAndValue = pair.split("=");
+			if (keyAndValue.length != 2) continue;
+			params.put(keyAndValue[0], keyAndValue[1]);
+		}
+		return params;
+	}
 
 	@Override
 	public int getByteCount() {
@@ -62,15 +89,13 @@ public class ChatHistoryRequest implements Message {
 
 	@Override
 	public void write(DataOutputStream o) throws IOException {
-		writeUUID(this.sourceId, o);
-		writeEnum(this.sourceType, o);
+		writeUUID(this.channelId, o);
 		writeString(this.query, o);
 	}
 
 	@Override
 	public void read(DataInputStream i) throws IOException {
-		this.sourceId = readUUID(i);
-		this.sourceType = readEnum(Source.class, i);
+		this.channelId = readUUID(i);
 		this.query = readString(i);
 	}
 }
