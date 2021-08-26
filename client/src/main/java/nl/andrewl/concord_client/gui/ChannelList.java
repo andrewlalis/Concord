@@ -1,6 +1,9 @@
 package nl.andrewl.concord_client.gui;
 
-import com.googlecode.lanterna.gui2.*;
+import com.googlecode.lanterna.gui2.Button;
+import com.googlecode.lanterna.gui2.Direction;
+import com.googlecode.lanterna.gui2.LinearLayout;
+import com.googlecode.lanterna.gui2.Panel;
 import nl.andrewl.concord_client.ConcordClient;
 import nl.andrewl.concord_core.msg.types.MoveToChannel;
 
