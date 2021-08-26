@@ -184,7 +184,7 @@ public class ConcordServer implements Runnable {
 	@Override
 	public void run() {
 		this.running = true;
-		this.scheduledExecutorService.scheduleAtFixedRate(this::publishMetaDataToDiscoveryServers, 1, 1, TimeUnit.MINUTES);
+		this.scheduledExecutorService.scheduleAtFixedRate(this::publishMetaDataToDiscoveryServers, 0, 1, TimeUnit.MINUTES);
 		ServerSocket serverSocket;
 		try {
 			serverSocket = new ServerSocket(this.config.getPort());
@@ -195,12 +195,17 @@ public class ConcordServer implements Runnable {
 			}
 			System.out.println(startupMessage);
 			while (this.running) {
-				Socket socket = serverSocket.accept();
-				ClientThread clientThread = new ClientThread(socket, this);
-				clientThread.start();
+				try {
+					Socket socket = serverSocket.accept();
+					ClientThread clientThread = new ClientThread(socket, this);
+					clientThread.start();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
+			serverSocket.close();
 		} catch (IOException e) {
-			e.printStackTrace();
+			System.err.println("Could not open server socket: " + e.getMessage());
 		}
 		this.scheduledExecutorService.shutdown();
 	}
