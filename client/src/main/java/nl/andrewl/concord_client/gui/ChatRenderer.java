@@ -22,8 +22,8 @@ public class ChatRenderer extends AbstractListBox.ListItemRenderer<Chat, ChatLis
 		}
 		graphics.putString(0, 0, chat.getSenderNickname());
 		Instant timestamp = Instant.ofEpochMilli(chat.getTimestamp());
-		String timeStr = timestamp.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-		String label = chat.getSenderNickname() + " @ " + timeStr + " : " + chat.getMessage();
+		String timeStr = timestamp.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"));
+		String label = chat.getSenderNickname() + "@" + timeStr + " : " + chat.getMessage();
 		label = TerminalTextUtils.fitString(label, graphics.getSize().getColumns());
 		while(TerminalTextUtils.getColumnWidth(label) < graphics.getSize().getColumns()) {
 			label += " ";

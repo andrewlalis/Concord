@@ -18,11 +18,14 @@ import java.util.List;
 @AllArgsConstructor
 public final class ServerConfig {
 	private String name;
+	private String description;
 	private int port;
 	private int chatHistoryMaxCount;
 	private int chatHistoryDefaultCount;
 	private int maxMessageLength;
 	private List<ChannelConfig> channels;
+
+	private List<String> discoveryServers;
 
 	/**
 	 * The path at which this config is stored.
@@ -45,11 +48,13 @@ public final class ServerConfig {
 		if (Files.notExists(filePath)) {
 			config = new ServerConfig(
 					"My Concord Server",
+					"A concord server for my friends and I.",
 					8123,
 					100,
 					50,
 					8192,
 					List.of(new ChannelConfig(idProvider.newId().toString(), "general", "Default channel for general discussion.")),
+					List.of(),
 					filePath
 			);
 			try (var out = Files.newOutputStream(filePath)) {

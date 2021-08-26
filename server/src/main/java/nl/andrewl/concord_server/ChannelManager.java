@@ -23,6 +23,17 @@ public class ChannelManager {
 		return Set.copyOf(this.channelIdMap.values());
 	}
 
+	public Optional<Channel> getDefaultChannel() {
+		var optionalGeneral = this.getChannelByName("general");
+		if (optionalGeneral.isPresent()) {
+			return optionalGeneral;
+		}
+		for (var channel : this.getChannels()) {
+			return Optional.of(channel);
+		}
+		return Optional.empty();
+	}
+
 	public void addChannel(Channel channel) {
 		this.channelNameMap.put(channel.getName(), channel);
 		this.channelIdMap.put(channel.getId(), channel);

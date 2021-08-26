@@ -7,6 +7,7 @@ module concord_server {
 
 	requires java.base;
 	requires java.logging;
+	requires java.net.http;
 
 	requires concord_core;
 

@@ -1,5 +1,8 @@
 package nl.andrewl.concord_server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.Serializer;
@@ -12,18 +15,21 @@ import nl.andrewl.concord_server.config.ServerConfig;
 import org.dizitart.no2.Nitrite;
 
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
@@ -46,6 +52,11 @@ public class ConcordServer implements Runnable {
 	@Getter
 	private final ChannelManager channelManager;
 
+	// Components for communicating with discovery servers.
+	private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+	private final HttpClient httpClient = HttpClient.newHttpClient();
+	private final ObjectMapper mapper = new ObjectMapper();
+
 	public ConcordServer() {
 		this.idProvider = new UUIDProvider();
 		this.config = ServerConfig.loadOrCreate(Path.of("server-config.json"), idProvider);
@@ -53,7 +64,6 @@ public class ConcordServer implements Runnable {
 				.filePath("concord-server.db")
 				.openOrCreate();
 		this.clients = new ConcurrentHashMap<>(32);
-
 		this.executorService = Executors.newCachedThreadPool();
 		this.eventManager = new EventManager(this);
 		this.channelManager = new ChannelManager(this);
@@ -83,7 +93,7 @@ public class ConcordServer implements Runnable {
 		clientThread.setClientId(id);
 		clientThread.setClientNickname(identification.getNickname());
 		// Immediately add the client to the default channel and send the initial welcome message.
-		var defaultChannel = this.channelManager.getChannelByName("general").orElseThrow();
+		var defaultChannel = this.channelManager.getDefaultChannel().orElseThrow();
 		clientThread.sendToClient(new ServerWelcome(id, defaultChannel.getId(), this.getMetaData()));
 		// It is important that we send the welcome message first. The client expects this as the initial response to their identification message.
 		defaultChannel.addClient(clientThread);
@@ -143,9 +153,38 @@ public class ConcordServer implements Runnable {
 		}
 	}
 
+	private void publishMetaDataToDiscoveryServers() {
+		if (this.config.getDiscoveryServers().isEmpty()) return;
+		ObjectNode node = this.mapper.createObjectNode();
+		node.put("name", this.config.getName());
+		node.put("description", this.config.getDescription());
+		node.put("port", this.config.getPort());
+		String json;
+		try {
+			json = this.mapper.writeValueAsString(node);
+		} catch (JsonProcessingException e) {
+			throw new UncheckedIOException(e);
+		}
+		var discoveryServers = List.copyOf(this.config.getDiscoveryServers());
+		for (var discoveryServer : discoveryServers) {
+			System.out.println("Publishing this server's metadata to discovery server at " + discoveryServer);
+			var request = HttpRequest.newBuilder(URI.create(discoveryServer))
+					.POST(HttpRequest.BodyPublishers.ofString(json))
+					.header("Content-Type", "application/json")
+					.timeout(Duration.ofSeconds(3))
+					.build();
+			try {
+				this.httpClient.send(request, HttpResponse.BodyHandlers.discarding());
+			} catch (IOException | InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
 	@Override
 	public void run() {
 		this.running = true;
+		this.scheduledExecutorService.scheduleAtFixedRate(this::publishMetaDataToDiscoveryServers, 1, 1, TimeUnit.MINUTES);
 		ServerSocket serverSocket;
 		try {
 			serverSocket = new ServerSocket(this.config.getPort());
@@ -163,6 +202,7 @@ public class ConcordServer implements Runnable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		this.scheduledExecutorService.shutdown();
 	}
 
 	public static void main(String[] args) {

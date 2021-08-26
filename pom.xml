@@ -12,6 +12,7 @@
         <module>server</module>
         <module>core</module>
         <module>client</module>
+        <module>catalog</module>
     </modules>
 
     <properties>

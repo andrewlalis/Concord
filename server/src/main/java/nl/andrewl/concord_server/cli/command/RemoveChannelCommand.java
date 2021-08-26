@@ -39,5 +39,6 @@ public class RemoveChannelCommand implements ServerCliCommand {
 		server.getConfig().getChannels().removeIf(channelConfig -> channelConfig.getName().equals(channelToRemove.getName()));
 		server.getConfig().save();
 		server.broadcast(server.getMetaData());
+		System.out.println("Removed the channel " + channelToRemove);
 	}
 }
