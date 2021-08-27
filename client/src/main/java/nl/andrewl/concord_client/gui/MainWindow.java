@@ -29,7 +29,6 @@ public class MainWindow extends BasicWindow {
 	}
 
 	public void connectToServer() {
-		System.out.println("Connecting to server!");
 		var addressDialog = new TextInputDialogBuilder()
 				.setTitle("Server Address")
 				.setDescription("Enter the address of the server to connect to. For example, \"localhost:1234\".")
