@@ -10,11 +10,20 @@ This platform will be organized by many independent servers, each of which will 
 - Private message between users in a server. **No support for private messaging users outside the context of a server.**
 - Banning users from the server.
 
+
+Here's a short demonstration of its current features:
+
+https://user-images.githubusercontent.com/9953867/131097344-27cddf74-0cda-44e7-95d0-c9dc607291d6.mp4
+
 # Concord Client
 
 To use the client, simply download the latest `concord-client.jar` JAR file from [the releases page](https://github.com/andrewlalis/Concord/releases) and run it with Java (version 16 or higher) from anywhere on your machine.
 
 Once you've started it, press **Enter** to click the button "Connect to Server". You will be prompted for the server IP address, and then a nickname for yourself, before you join the server. To disconnect, press **CTRL+C** at any time.
+
+![concord_client_server_panel](https://user-images.githubusercontent.com/9953867/131096996-c9eec7e0-e8f0-4755-a14c-b81c727fba43.PNG)
+
+Your console should look something like the above image. On the left, you have a list of channels, with a `*` next to the channel you're currently in. On the right, you have a list of all the other people that are in your channel. And of course in the middle you've got your chat, and a chatbox you can type messages in.
 
 # Concord Server
 
