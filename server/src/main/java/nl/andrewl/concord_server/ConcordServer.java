@@ -1,8 +1,5 @@
 package nl.andrewl.concord_server;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.Serializer;
@@ -16,15 +13,9 @@ import org.dizitart.no2.Nitrite;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.file.Path;
-import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -36,45 +27,62 @@ import java.util.stream.Collectors;
  * The main server implementation, which handles accepting new clients.
  */
 public class ConcordServer implements Runnable {
+	private static final Path CONFIG_FILE = Path.of("server-config.json");
+	private static final Path DATABASE_FILE = Path.of("concord-server.db");
+
 	private final Map<UUID, ClientThread> clients;
 	private volatile boolean running;
+	private final ServerSocket serverSocket;
 
+	/**
+	 * Server configuration data. This is used to define channels, discovery
+	 * server addresses, and more.
+	 */
 	@Getter
 	private final ServerConfig config;
+
+	/**
+	 * The component that generates new user and channel ids.
+	 */
 	@Getter
 	private final IdProvider idProvider;
+
+	/**
+	 * The database that contains all messages and other server information.
+	 */
 	@Getter
 	private final Nitrite db;
+
+	/**
+	 * A general-purpose executor service that can be used to submit async tasks.
+	 */
 	@Getter
-	private final ExecutorService executorService;
+	private final ExecutorService executorService = Executors.newCachedThreadPool();
+
+	/**
+	 * Manager that handles incoming messages and events by clients.
+	 */
 	@Getter
 	private final EventManager eventManager;
+
+	/**
+	 * Manager that handles the collection of channels in this server.
+	 */
 	@Getter
 	private final ChannelManager channelManager;
 
-	// Components for communicating with discovery servers.
+	private final DiscoveryServerPublisher discoveryServerPublisher;
 	private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-	private final HttpClient httpClient = HttpClient.newHttpClient();
-	private final ObjectMapper mapper = new ObjectMapper();
 
-	public ConcordServer() {
+	public ConcordServer() throws IOException {
 		this.idProvider = new UUIDProvider();
-		this.config = ServerConfig.loadOrCreate(Path.of("server-config.json"), idProvider);
-		this.db = Nitrite.builder()
-				.filePath("concord-server.db")
-				.openOrCreate();
+		this.config = ServerConfig.loadOrCreate(CONFIG_FILE, idProvider);
+		this.discoveryServerPublisher = new DiscoveryServerPublisher(this.config);
+		this.db = Nitrite.builder().filePath(DATABASE_FILE.toFile()).openOrCreate();
 		this.clients = new ConcurrentHashMap<>(32);
-		this.executorService = Executors.newCachedThreadPool();
 		this.eventManager = new EventManager(this);
 		this.channelManager = new ChannelManager(this);
-		for (var channelConfig : config.getChannels()) {
-			this.channelManager.addChannel(new Channel(
-					this,
-					UUID.fromString(channelConfig.getId()),
-					channelConfig.getName(),
-					this.db.getCollection("channel-" + channelConfig.getId())
-			));
-		}
+		this.serverSocket = new ServerSocket(this.config.getPort());
 	}
 
 	/**
@@ -115,8 +123,27 @@ public class ConcordServer implements Runnable {
 		}
 	}
 
+	/**
+	 * @return True if the server is currently running, meaning it is accepting
+	 * connections, or false otherwise.
+	 */
 	public boolean isRunning() {
 		return running;
+	}
+
+	/**
+	 * Stops the server. Has no effect if the server has not started yet or has
+	 * already been stopped.
+	 */
+	public void stop() {
+		this.running = false;
+		if (!this.serverSocket.isClosed()) {
+			try {
+				this.serverSocket.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	public List<UserData> getClients() {
@@ -153,64 +180,54 @@ public class ConcordServer implements Runnable {
 		}
 	}
 
-	private void publishMetaDataToDiscoveryServers() {
-		if (this.config.getDiscoveryServers().isEmpty()) return;
-		ObjectNode node = this.mapper.createObjectNode();
-		node.put("name", this.config.getName());
-		node.put("description", this.config.getDescription());
-		node.put("port", this.config.getPort());
-		String json;
-		try {
-			json = this.mapper.writeValueAsString(node);
-		} catch (JsonProcessingException e) {
-			throw new UncheckedIOException(e);
+	/**
+	 * Shuts down the server cleanly by doing the following things:
+	 * <ol>
+	 *     <li>Disconnecting all clients.</li>
+	 *     <li>Shutting down any executor services.</li>
+	 *     <li>Flushing and compacting the message database.</li>
+	 *     <li>Flushing the server configuration one last time.</li>
+	 * </ol>
+	 */
+	private void shutdown() {
+		System.out.println("Shutting down the server.");
+		for (var clientId : this.clients.keySet()) {
+			this.deregisterClient(clientId);
 		}
-		var discoveryServers = List.copyOf(this.config.getDiscoveryServers());
-		for (var discoveryServer : discoveryServers) {
-			System.out.println("Publishing this server's metadata to discovery server at " + discoveryServer);
-			var request = HttpRequest.newBuilder(URI.create(discoveryServer))
-					.POST(HttpRequest.BodyPublishers.ofString(json))
-					.header("Content-Type", "application/json")
-					.timeout(Duration.ofSeconds(3))
-					.build();
-			try {
-				this.httpClient.send(request, HttpResponse.BodyHandlers.discarding());
-			} catch (IOException | InterruptedException e) {
-				e.printStackTrace();
-			}
+		this.scheduledExecutorService.shutdown();
+		this.executorService.shutdown();
+		this.db.close();
+		try {
+			this.config.save();
+		} catch (IOException e) {
+			System.err.println("Could not save configuration on shutdown: " + e.getMessage());
 		}
 	}
 
 	@Override
 	public void run() {
 		this.running = true;
-		this.scheduledExecutorService.scheduleAtFixedRate(this::publishMetaDataToDiscoveryServers, 0, 1, TimeUnit.MINUTES);
-		ServerSocket serverSocket;
-		try {
-			serverSocket = new ServerSocket(this.config.getPort());
-			StringBuilder startupMessage = new StringBuilder();
-			startupMessage.append("Opened server on port ").append(config.getPort()).append("\n");
-			for (var channel : this.channelManager.getChannels()) {
-				startupMessage.append("\tChannel \"").append(channel).append('\n');
-			}
-			System.out.println(startupMessage);
-			while (this.running) {
-				try {
-					Socket socket = serverSocket.accept();
-					ClientThread clientThread = new ClientThread(socket, this);
-					clientThread.start();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-			serverSocket.close();
-		} catch (IOException e) {
-			System.err.println("Could not open server socket: " + e.getMessage());
+		this.scheduledExecutorService.scheduleAtFixedRate(this.discoveryServerPublisher::publish, 0, 1, TimeUnit.MINUTES);
+		StringBuilder startupMessage = new StringBuilder();
+		startupMessage.append("Opened server on port ").append(config.getPort()).append("\n")
+				.append("The following channels are available:\n");
+		for (var channel : this.channelManager.getChannels()) {
+			startupMessage.append("\tChannel \"").append(channel).append('\n');
 		}
-		this.scheduledExecutorService.shutdown();
+		System.out.println(startupMessage);
+		while (this.running) {
+			try {
+				Socket socket = this.serverSocket.accept();
+				ClientThread clientThread = new ClientThread(socket, this);
+				clientThread.start();
+			} catch (IOException e) {
+				System.err.println("Could not accept new client connection: " + e.getMessage());
+			}
+		}
+		this.shutdown();
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		var server = new ConcordServer();
 		new Thread(server).start();
 		new ServerCli(server).run();

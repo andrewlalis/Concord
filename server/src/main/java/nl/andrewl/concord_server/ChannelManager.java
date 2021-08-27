@@ -17,6 +17,15 @@ public class ChannelManager {
 		this.server = server;
 		this.channelNameMap = new ConcurrentHashMap<>();
 		this.channelIdMap = new ConcurrentHashMap<>();
+		// Initialize the channels according to what's defined in the server's config.
+		for (var channelConfig : server.getConfig().getChannels()) {
+			this.addChannel(new Channel(
+					server,
+					UUID.fromString(channelConfig.getId()),
+					channelConfig.getName(),
+					server.getDb().getCollection("channel-" + channelConfig.getId())
+			));
+		}
 	}
 
 	public Set<Channel> getChannels() {

@@ -4,6 +4,7 @@ import nl.andrewl.concord_server.ConcordServer;
 import nl.andrewl.concord_server.cli.command.AddChannelCommand;
 import nl.andrewl.concord_server.cli.command.ListClientsCommand;
 import nl.andrewl.concord_server.cli.command.RemoveChannelCommand;
+import nl.andrewl.concord_server.cli.command.StopCommand;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -22,10 +23,19 @@ public class ServerCli implements Runnable {
 		this.commands.put("list-clients", new ListClientsCommand());
 		this.commands.put("add-channel", new AddChannelCommand());
 		this.commands.put("remove-channel", new RemoveChannelCommand());
+		this.commands.put("stop", new StopCommand());
+
+		this.commands.put("help", (s, args) -> {
+			System.out.println("The following commands are available:");
+			for (var key : commands.keySet().stream().sorted().toList()) {
+				System.out.println("\t" + key);
+			}
+		});
 	}
 
 	@Override
 	public void run() {
+		System.out.println("Server command-line-interface initialized. Type \"help\" for a list of available commands.");
 		BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 		String line;
 		try {
