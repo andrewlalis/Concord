@@ -4,11 +4,13 @@ Console-based real-time messaging platform, inspired by Discord.
 ## Vision
 
 This platform will be organized by many independent servers, each of which will support the following:
-- Multiple message channels. By default, there's one `general` channel.
-- Broadcasting itself on certain discovery servers for users to find. The server decides where it wants to be discovered, if at all.
-- Starting threads as spin-offs of a source message (with infinite recursion, i.e. threads within threads).
-- Private message between users in a server. **No support for private messaging users outside the context of a server.**
-- Banning users from the server.
+- [x] Multiple message channels. By default, there's one `general` channel.
+- [x] Broadcasting itself on certain discovery servers for users to find. The server decides where it wants to be discovered, if at all.
+- [ ] Starting threads as spin-offs of a source message (with infinite recursion, i.e. threads within threads).
+- [x] Private message between users in a server. **No support for private messaging users outside the context of a server.**
+- [ ] Banning users from the server.
+- [ ] Voice channels.
+- [ ] Persistent users. Connect and disconnect from a server multiple times, while keeping your information intact.
 
 
 Here's a short demonstration of its current features:
