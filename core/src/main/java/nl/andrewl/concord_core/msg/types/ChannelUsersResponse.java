@@ -12,6 +12,12 @@ import java.util.List;
 
 import static nl.andrewl.concord_core.msg.MessageUtils.*;
 
+/**
+ * This message is sent from the server to the client when the information about
+ * the users in the channel that a client is in has changed. For example, when
+ * a user leaves a channel, all others in that channel will be sent this message
+ * to indicate that update.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

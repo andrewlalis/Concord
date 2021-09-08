@@ -37,6 +37,10 @@ public class Channel {
 		this.initCollection();
 	}
 
+	/**
+	 * Initializes this channel's nitrite database collection, which involves
+	 * creating any indexes that don't yet exist.
+	 */
 	private void initCollection() {
 		if (!this.messageCollection.hasIndex("timestamp")) {
 			System.out.println("Adding index on \"timestamp\" field to collection " + this.messageCollection.getName());
@@ -59,6 +63,11 @@ public class Channel {
 		}
 	}
 
+	/**
+	 * Adds a client to this channel. Also sends an update to all clients,
+	 * including the new one, telling them that a user has joined.
+	 * @param clientThread The client to add.
+	 */
 	public void addClient(ClientThread clientThread) {
 		this.connectedClients.add(clientThread);
 		try {
@@ -68,6 +77,11 @@ public class Channel {
 		}
 	}
 
+	/**
+	 * Removes a client from this channel. Also sends an update to all the
+	 * clients that are still connected, telling them that a user has left.
+	 * @param clientThread The client to remove.
+	 */
 	public void removeClient(ClientThread clientThread) {
 		this.connectedClients.remove(clientThread);
 		try {
@@ -79,19 +93,25 @@ public class Channel {
 
 	/**
 	 * Sends a message to all clients that are currently connected to this
-	 * channel.
+	 * channel. Makes use of the server's serializer to preemptively serialize
+	 * the data once, so that clients need only write a byte array to their
+	 * respective output streams.
 	 * @param msg The message to send.
 	 * @throws IOException If an error occurs.
 	 */
 	public void sendMessage(Message msg) throws IOException {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream(msg.getByteCount() + 1);
-		Serializer.writeMessage(msg, baos);
+		this.server.getSerializer().writeMessage(msg, baos);
 		byte[] data = baos.toByteArray();
 		for (var client : this.connectedClients) {
 			client.sendToClient(data);
 		}
 	}
 
+	/**
+	 * Gets a list of information about each user in this channel.
+	 * @return A list of {@link UserData} objects.
+	 */
 	public List<UserData> getUserData() {
 		List<UserData> users = new ArrayList<>(this.connectedClients.size());
 		for (var clientThread : this.getConnectedClients()) {

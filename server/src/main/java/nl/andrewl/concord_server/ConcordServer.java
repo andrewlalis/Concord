@@ -35,6 +35,14 @@ public class ConcordServer implements Runnable {
 	private final ServerSocket serverSocket;
 
 	/**
+	 * A utility serializer that's mostly used when preparing a message to
+	 * broadcast to a set of users, which is more efficient than having each
+	 * individual client thread serialize the same message before sending it.
+	 */
+	@Getter
+	private final Serializer serializer;
+
+	/**
 	 * Server configuration data. This is used to define channels, discovery
 	 * server addresses, and more.
 	 */
@@ -83,6 +91,7 @@ public class ConcordServer implements Runnable {
 		this.eventManager = new EventManager(this);
 		this.channelManager = new ChannelManager(this);
 		this.serverSocket = new ServerSocket(this.config.getPort());
+		this.serializer = new Serializer();
 	}
 
 	/**
@@ -164,13 +173,14 @@ public class ConcordServer implements Runnable {
 	}
 
 	/**
-	 * Sends a message to every connected client.
+	 * Sends a message to every connected client, ignoring any channels. All
+	 * clients connected to this server will receive this message.
 	 * @param message The message to send.
 	 */
 	public void broadcast(Message message) {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream(message.getByteCount());
 		try {
-			Serializer.writeMessage(message, baos);
+			this.serializer.writeMessage(message, baos);
 			byte[] data = baos.toByteArray();
 			for (var client : this.clients.values()) {
 				client.sendToClient(data);
