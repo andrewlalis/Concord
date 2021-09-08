@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface ClientModelListener {
-	default void channelMoved(UUID oldChannelId, UUID newChannelId) {}
+	default void channelMoved(UUID oldChannelId, String oldChannelName, UUID newChannelId, String newChannelName) {}
 
 	default void usersUpdated(List<UserData> users) {}
 

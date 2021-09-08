@@ -1,12 +1,12 @@
-package nl.andrewl.concord_server;
+package nl.andrewl.concord_server.event;
 
 import lombok.extern.java.Log;
 import nl.andrewl.concord_core.msg.Message;
-import nl.andrewl.concord_core.msg.types.ChannelUsersRequest;
 import nl.andrewl.concord_core.msg.types.Chat;
 import nl.andrewl.concord_core.msg.types.ChatHistoryRequest;
 import nl.andrewl.concord_core.msg.types.MoveToChannel;
-import nl.andrewl.concord_server.event.*;
+import nl.andrewl.concord_server.ConcordServer;
+import nl.andrewl.concord_server.client.ClientThread;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,7 +25,6 @@ public class EventManager {
 		this.messageHandlers = new HashMap<>();
 		this.messageHandlers.put(Chat.class, new ChatHandler());
 		this.messageHandlers.put(MoveToChannel.class, new ChannelMoveHandler());
-		this.messageHandlers.put(ChannelUsersRequest.class, new ChannelUsersRequestHandler());
 		this.messageHandlers.put(ChatHistoryRequest.class, new ChatHistoryRequestHandler());
 	}
 

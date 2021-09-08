@@ -41,6 +41,9 @@ import static nl.andrewl.concord_core.msg.MessageUtils.*;
  *         <li><code>to</code> - ISO-8601 timestamp indicating the timestamp
  *         before which messages should be fetched. Only messages before this
  *         point in time are returned.</li>
+ *         <li><code>id</code> - A single message id to fetch. If this parameter
+ *         is present, all others are ignored, and a list containing the single
+ *         message is returned, if it could be found, otherwise an empty list.</li>
  *     </ul>
  * </p>
  * <p>

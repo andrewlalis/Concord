@@ -5,9 +5,10 @@ import com.googlecode.lanterna.gui2.Direction;
 import com.googlecode.lanterna.gui2.LinearLayout;
 import com.googlecode.lanterna.gui2.Panel;
 import nl.andrewl.concord_client.ConcordClient;
-import nl.andrewl.concord_core.msg.types.ChannelUsersResponse;
+import nl.andrewl.concord_core.msg.types.MoveToChannel;
 import nl.andrewl.concord_core.msg.types.UserData;
 
+import java.io.IOException;
 import java.util.List;
 
 public class UserList extends Panel {
@@ -22,7 +23,14 @@ public class UserList extends Panel {
 		this.removeAllComponents();
 		for (var user : usersResponse) {
 			Button b = new Button(user.getName(), () -> {
-				System.out.println("Opening DM channel with user " + user.getName() + ", id: " + user.getId());
+				if (!client.getModel().getId().equals(user.getId())) {
+					System.out.println("Opening DM channel with user " + user.getName() + ", id: " + user.getId());
+					try {
+						client.sendMessage(new MoveToChannel(user.getId()));
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
 			});
 			this.addComponent(b);
 		}

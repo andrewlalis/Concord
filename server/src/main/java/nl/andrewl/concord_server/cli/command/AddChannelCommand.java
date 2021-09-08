@@ -1,12 +1,15 @@
 package nl.andrewl.concord_server.cli.command;
 
-import nl.andrewl.concord_server.Channel;
 import nl.andrewl.concord_server.ConcordServer;
+import nl.andrewl.concord_server.channel.Channel;
 import nl.andrewl.concord_server.cli.ServerCliCommand;
 import nl.andrewl.concord_server.config.ServerConfig;
 
 import java.util.UUID;
 
+/**
+ * This command adds a new channel to the server.
+ */
 public class AddChannelCommand implements ServerCliCommand {
 	@Override
 	public void handle(ConcordServer server, String[] args) throws Exception {
@@ -32,8 +35,7 @@ public class AddChannelCommand implements ServerCliCommand {
 		server.getConfig().getChannels().add(channelConfig);
 		server.getConfig().save();
 
-		var col = server.getDb().getCollection("channel-" + id);
-		server.getChannelManager().addChannel(new Channel(server, id, name, col));
-		server.broadcast(server.getMetaData());
+		server.getChannelManager().addChannel(new Channel(server, id, name));
+		server.getClientManager().broadcast(server.getMetaData());
 	}
 }

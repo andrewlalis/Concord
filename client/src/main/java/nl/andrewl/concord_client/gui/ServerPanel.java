@@ -43,7 +43,7 @@ public class ServerPanel extends Panel implements ClientModelListener {
 	}
 
 	@Override
-	public void channelMoved(UUID oldChannelId, UUID newChannelId) {
+	public void channelMoved(UUID oldChannelId, String oldChannelName, UUID newChannelId, String newChannelName) {
 		this.getTextGUI().getGUIThread().invokeLater(() -> {
 			this.channelList.setChannels();
 			this.channelChatBox.getChatList().clearItems();

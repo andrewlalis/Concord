@@ -53,9 +53,7 @@ public class ChannelChatBox extends Panel {
 	}
 
 	public void refreshBorder() {
-		String name = client.getModel().getServerMetaData().getChannels().stream()
-				.filter(channelData -> channelData.getId().equals(client.getModel().getCurrentChannelId()))
-				.findAny().orElseThrow().getName();
+		String name = client.getModel().getCurrentChannelName();
 		if (this.chatBorder != null) this.removeComponent(this.chatBorder);
 		this.chatBorder = Borders.doubleLine("#" + name);
 		this.chatBorder.setComponent(this.chatList);

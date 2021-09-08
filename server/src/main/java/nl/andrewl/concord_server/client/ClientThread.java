@@ -1,10 +1,12 @@
-package nl.andrewl.concord_server;
+package nl.andrewl.concord_server.client;
 
 import lombok.Getter;
 import lombok.Setter;
 import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.types.Identification;
 import nl.andrewl.concord_core.msg.types.UserData;
+import nl.andrewl.concord_server.channel.Channel;
+import nl.andrewl.concord_server.ConcordServer;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -109,7 +111,7 @@ public class ClientThread extends Thread {
 		}
 
 		if (this.clientId != null) {
-			this.server.deregisterClient(this.clientId);
+			this.server.getClientManager().deregisterClient(this.clientId);
 		}
 		try {
 			if (!this.socket.isClosed()) {
@@ -133,7 +135,7 @@ public class ClientThread extends Thread {
 			try {
 				var msg = this.server.getSerializer().readMessage(this.in);
 				if (msg instanceof Identification id) {
-					this.server.registerClient(id, this);
+					this.server.getClientManager().registerClient(id, this);
 					return true;
 				}
 			} catch (IOException e) {

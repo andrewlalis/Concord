@@ -13,6 +13,11 @@ import java.util.UUID;
 
 import static nl.andrewl.concord_core.msg.MessageUtils.*;
 
+/**
+ * Metadata is sent by the server to clients to inform them of the structure of
+ * the server. This includes basic information about the server's own properties
+ * as well as information about all top-level channels.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -34,13 +39,13 @@ public class ServerMetaData implements Message {
 	@Override
 	public void read(DataInputStream i) throws IOException {
 		this.name = readString(i);
-		try {
-			this.channels = readList(ChannelData.class, i);
-		} catch (ReflectiveOperationException e) {
-			throw new IOException("Reflection exception", e);
-		}
+		this.channels = readList(ChannelData.class, i);
 	}
 
+	/**
+	 * Metadata about a top-level channel in the server which is visible and
+	 * joinable for a user.
+	 */
 	@Data
 	@NoArgsConstructor
 	@AllArgsConstructor

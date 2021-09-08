@@ -10,9 +10,9 @@ import com.googlecode.lanterna.terminal.Terminal;
 import lombok.Getter;
 import nl.andrewl.concord_client.event.EventManager;
 import nl.andrewl.concord_client.event.handlers.ChannelMovedHandler;
-import nl.andrewl.concord_client.event.handlers.ChannelUsersResponseHandler;
 import nl.andrewl.concord_client.event.handlers.ChatHistoryResponseHandler;
 import nl.andrewl.concord_client.event.handlers.ServerMetaDataHandler;
+import nl.andrewl.concord_client.event.handlers.ServerUsersHandler;
 import nl.andrewl.concord_client.gui.MainWindow;
 import nl.andrewl.concord_client.model.ClientModel;
 import nl.andrewl.concord_core.msg.Message;
@@ -48,7 +48,7 @@ public class ConcordClient implements Runnable {
 
 		// Add event listeners.
 		this.eventManager.addHandler(MoveToChannel.class, new ChannelMovedHandler());
-		this.eventManager.addHandler(ChannelUsersResponse.class, new ChannelUsersResponseHandler());
+		this.eventManager.addHandler(ServerUsers.class, new ServerUsersHandler());
 		this.eventManager.addHandler(ChatHistoryResponse.class, new ChatHistoryResponseHandler());
 		this.eventManager.addHandler(Chat.class, (msg, client) -> client.getModel().getChatHistory().addChat(msg));
 		this.eventManager.addHandler(ServerMetaData.class, new ServerMetaDataHandler());
@@ -70,10 +70,9 @@ public class ConcordClient implements Runnable {
 		this.serializer.writeMessage(new Identification(nickname), this.out);
 		Message reply = this.serializer.readMessage(this.in);
 		if (reply instanceof ServerWelcome welcome) {
-			var model = new ClientModel(welcome.getClientId(), nickname, welcome.getCurrentChannelId(), welcome.getMetaData());
+			var model = new ClientModel(welcome.getClientId(), nickname, welcome.getCurrentChannelId(), welcome.getCurrentChannelName(), welcome.getMetaData());
 			// Start fetching initial data for the channel we were initially put into.
-			this.sendMessage(new ChannelUsersRequest(this.model.getCurrentChannelId()));
-			this.sendMessage(new ChatHistoryRequest(this.model.getCurrentChannelId(), ""));
+			this.sendMessage(new ChatHistoryRequest(model.getCurrentChannelId(), ""));
 			return model;
 		} else {
 			throw new IOException("Unexpected response from the server after sending identification message.");

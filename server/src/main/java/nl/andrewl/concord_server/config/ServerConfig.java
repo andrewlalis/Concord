@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import nl.andrewl.concord_server.IdProvider;
+import nl.andrewl.concord_server.util.IdProvider;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -23,6 +23,7 @@ public final class ServerConfig {
 	private int chatHistoryMaxCount;
 	private int chatHistoryDefaultCount;
 	private int maxMessageLength;
+	private String defaultChannel;
 	private List<ChannelConfig> channels;
 
 	private List<String> discoveryServers;
@@ -53,6 +54,7 @@ public final class ServerConfig {
 					100,
 					50,
 					8192,
+					"general",
 					List.of(new ChannelConfig(idProvider.newId().toString(), "general", "Default channel for general discussion.")),
 					List.of(),
 					filePath

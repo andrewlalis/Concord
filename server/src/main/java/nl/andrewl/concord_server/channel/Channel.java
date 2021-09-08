@@ -1,11 +1,11 @@
-package nl.andrewl.concord_server;
+package nl.andrewl.concord_server.channel;
 
 import lombok.Getter;
 import nl.andrewl.concord_core.msg.Message;
-import nl.andrewl.concord_core.msg.Serializer;
-import nl.andrewl.concord_core.msg.types.ChannelUsersResponse;
 import nl.andrewl.concord_core.msg.types.UserData;
-import org.dizitart.no2.IndexOptions;
+import nl.andrewl.concord_server.ConcordServer;
+import nl.andrewl.concord_server.client.ClientThread;
+import nl.andrewl.concord_server.util.CollectionUtils;
 import org.dizitart.no2.IndexType;
 import org.dizitart.no2.NitriteCollection;
 
@@ -16,51 +16,36 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Represents a single communication area in which messages are sent by clients
- * and received by all connected clients.
+ * and received by all connected clients. A channel is a top-level communication
+ * medium, and usually this is a server channel or private message between two
+ * clients in a server.
  */
 @Getter
 public class Channel {
 	private final ConcordServer server;
-	private UUID id;
+	private final UUID id;
 	private String name;
 
 	private final Set<ClientThread> connectedClients;
 
+	/**
+	 * A document collection which holds all messages created in this channel,
+	 * indexed on id, timestamp, message, and sender's nickname.
+	 */
 	private final NitriteCollection messageCollection;
 
-	public Channel(ConcordServer server, UUID id, String name, NitriteCollection messageCollection) {
+	public Channel(ConcordServer server, UUID id, String name) {
 		this.server = server;
 		this.id = id;
 		this.name = name;
 		this.connectedClients = ConcurrentHashMap.newKeySet();
-		this.messageCollection = messageCollection;
-		this.initCollection();
-	}
-
-	/**
-	 * Initializes this channel's nitrite database collection, which involves
-	 * creating any indexes that don't yet exist.
-	 */
-	private void initCollection() {
-		if (!this.messageCollection.hasIndex("timestamp")) {
-			System.out.println("Adding index on \"timestamp\" field to collection " + this.messageCollection.getName());
-			this.messageCollection.createIndex("timestamp", IndexOptions.indexOptions(IndexType.NonUnique));
-		}
-		if (!this.messageCollection.hasIndex("senderNickname")) {
-			System.out.println("Adding index on \"senderNickname\" field to collection " + this.messageCollection.getName());
-			this.messageCollection.createIndex("senderNickname", IndexOptions.indexOptions(IndexType.Fulltext));
-		}
-		if (!this.messageCollection.hasIndex("message")) {
-			System.out.println("Adding index on \"message\" field to collection " + this.messageCollection.getName());
-			this.messageCollection.createIndex("message", IndexOptions.indexOptions(IndexType.Fulltext));
-		}
-		var fields = List.of("timestamp", "senderNickname", "message");
-		for (var index : this.messageCollection.listIndices()) {
-			if (!fields.contains(index.getField())) {
-				System.out.println("Dropping unknown index " + index.getField() + " from collection " + index.getCollectionName());
-				this.messageCollection.dropIndex(index.getField());
-			}
-		}
+		this.messageCollection = server.getDb().getCollection("channel-" + id);
+		CollectionUtils.ensureIndexes(this.messageCollection, Map.of(
+				"timestamp", IndexType.NonUnique,
+				"senderNickname", IndexType.Fulltext,
+				"message", IndexType.Fulltext,
+				"id", IndexType.Unique
+		));
 	}
 
 	/**
@@ -70,11 +55,11 @@ public class Channel {
 	 */
 	public void addClient(ClientThread clientThread) {
 		this.connectedClients.add(clientThread);
-		try {
-			this.sendMessage(new ChannelUsersResponse(this.getUserData()));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+//		try {
+//			this.sendMessage(new ChannelUsersResponse(this.getUserData()));
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
 	}
 
 	/**
@@ -84,11 +69,11 @@ public class Channel {
 	 */
 	public void removeClient(ClientThread clientThread) {
 		this.connectedClients.remove(clientThread);
-		try {
-			this.sendMessage(new ChannelUsersResponse(this.getUserData()));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+//		try {
+//			this.sendMessage(new ChannelUsersResponse(this.getUserData()));
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
 	}
 
 	/**
@@ -125,12 +110,13 @@ public class Channel {
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (!(o instanceof Channel channel)) return false;
-		return name.equals(channel.name);
+		if (Objects.equals(this.id, channel.getId())) return true;
+		return Objects.equals(this.name, channel.getName());
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(name);
+		return Objects.hash(id, name);
 	}
 
 	@Override

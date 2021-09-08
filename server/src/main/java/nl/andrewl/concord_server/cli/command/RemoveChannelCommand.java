@@ -1,6 +1,6 @@
 package nl.andrewl.concord_server.cli.command;
 
-import nl.andrewl.concord_server.Channel;
+import nl.andrewl.concord_server.channel.Channel;
 import nl.andrewl.concord_server.ConcordServer;
 import nl.andrewl.concord_server.cli.ServerCliCommand;
 
@@ -38,7 +38,7 @@ public class RemoveChannelCommand implements ServerCliCommand {
 		server.getDb().getContext().dropCollection(channelToRemove.getMessageCollection().getName());
 		server.getConfig().getChannels().removeIf(channelConfig -> channelConfig.getName().equals(channelToRemove.getName()));
 		server.getConfig().save();
-		server.broadcast(server.getMetaData());
+		server.getClientManager().broadcast(server.getMetaData());
 		System.out.println("Removed the channel " + channelToRemove);
 	}
 }

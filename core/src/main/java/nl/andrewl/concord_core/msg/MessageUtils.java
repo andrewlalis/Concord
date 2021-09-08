@@ -18,11 +18,11 @@ public class MessageUtils {
 	/**
 	 * Gets the number of bytes that the given string will occupy when it is
 	 * serialized.
-	 * @param s The string.
+	 * @param s The string. This may be null.
 	 * @return The number of bytes used to serialize the string.
 	 */
 	public static int getByteSize(String s) {
-		return Integer.BYTES + s.getBytes(StandardCharsets.UTF_8).length;
+		return Integer.BYTES + (s == null ? 0 : s.getBytes(StandardCharsets.UTF_8).length);
 	}
 
 	/**
@@ -61,22 +61,35 @@ public class MessageUtils {
 	}
 
 	public static void writeEnum(Enum<?> value, DataOutputStream o) throws IOException {
-		o.writeInt(value.ordinal());
+		if (value == null) {
+			o.writeInt(-1);
+		} else {
+			o.writeInt(value.ordinal());
+		}
 	}
 
 	public static <T extends Enum<?>> T readEnum(Class<T> e, DataInputStream i) throws IOException {
 		int ordinal = i.readInt();
+		if (ordinal == -1) return null;
 		return e.getEnumConstants()[ordinal];
 	}
 
 	public static void writeUUID(UUID value, DataOutputStream o) throws IOException {
-		o.writeLong(value.getMostSignificantBits());
-		o.writeLong(value.getLeastSignificantBits());
+		if (value == null) {
+			o.writeLong(-1);
+			o.writeLong(-1);
+		} else {
+			o.writeLong(value.getMostSignificantBits());
+			o.writeLong(value.getLeastSignificantBits());
+		}
 	}
 
 	public static UUID readUUID(DataInputStream i) throws IOException {
 		long a = i.readLong();
 		long b = i.readLong();
+		if (a == -1 && b == -1) {
+			return null;
+		}
 		return new UUID(a, b);
 	}
 
@@ -95,15 +108,19 @@ public class MessageUtils {
 		}
 	}
 
-	public static <T extends Message> List<T> readList(Class<T> type, DataInputStream i) throws IOException, ReflectiveOperationException {
+	public static <T extends Message> List<T> readList(Class<T> type, DataInputStream i) throws IOException {
 		int size = i.readInt();
-		var constructor = type.getConstructor();
-		List<T> items = new ArrayList<>(size);
-		for (int k = 0; k < size; k++) {
-			var item = constructor.newInstance();
-			item.read(i);
-			items.add(item);
+		try {
+			var constructor = type.getConstructor();
+			List<T> items = new ArrayList<>(size);
+			for (int k = 0; k < size; k++) {
+				var item = constructor.newInstance();
+				item.read(i);
+				items.add(item);
+			}
+			return items;
+		} catch (ReflectiveOperationException e) {
+			throw new IOException(e);
 		}
-		return items;
 	}
 }

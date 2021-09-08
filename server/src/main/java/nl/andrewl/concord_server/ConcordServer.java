@@ -1,26 +1,27 @@
 package nl.andrewl.concord_server;
 
 import lombok.Getter;
-import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.Serializer;
-import nl.andrewl.concord_core.msg.types.Identification;
 import nl.andrewl.concord_core.msg.types.ServerMetaData;
-import nl.andrewl.concord_core.msg.types.ServerWelcome;
-import nl.andrewl.concord_core.msg.types.UserData;
+import nl.andrewl.concord_server.channel.ChannelManager;
 import nl.andrewl.concord_server.cli.ServerCli;
+import nl.andrewl.concord_server.client.ClientManager;
+import nl.andrewl.concord_server.client.ClientThread;
 import nl.andrewl.concord_server.config.ServerConfig;
+import nl.andrewl.concord_server.event.EventManager;
+import nl.andrewl.concord_server.util.IdProvider;
+import nl.andrewl.concord_server.util.UUIDProvider;
 import org.dizitart.no2.Nitrite;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Path;
 import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -30,7 +31,6 @@ public class ConcordServer implements Runnable {
 	private static final Path CONFIG_FILE = Path.of("server-config.json");
 	private static final Path DATABASE_FILE = Path.of("concord-server.db");
 
-	private final Map<UUID, ClientThread> clients;
 	private volatile boolean running;
 	private final ServerSocket serverSocket;
 
@@ -79,6 +79,12 @@ public class ConcordServer implements Runnable {
 	@Getter
 	private final ChannelManager channelManager;
 
+	/**
+	 * Manager that handles the collection of clients connected to this server.
+	 */
+	@Getter
+	private final ClientManager clientManager;
+
 	private final DiscoveryServerPublisher discoveryServerPublisher;
 	private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
 
@@ -87,49 +93,11 @@ public class ConcordServer implements Runnable {
 		this.config = ServerConfig.loadOrCreate(CONFIG_FILE, idProvider);
 		this.discoveryServerPublisher = new DiscoveryServerPublisher(this.config);
 		this.db = Nitrite.builder().filePath(DATABASE_FILE.toFile()).openOrCreate();
-		this.clients = new ConcurrentHashMap<>(32);
 		this.eventManager = new EventManager(this);
 		this.channelManager = new ChannelManager(this);
+		this.clientManager = new ClientManager(this);
 		this.serverSocket = new ServerSocket(this.config.getPort());
 		this.serializer = new Serializer();
-	}
-
-	/**
-	 * Registers a new client as connected to the server. This is done once the
-	 * client thread has received the correct identification information from
-	 * the client. The server will register the client in its global set of
-	 * connected clients, and it will immediately move the client to the default
-	 * channel.
-	 * @param identification The client's identification data.
-	 * @param clientThread The client manager thread.
-	 */
-	public void registerClient(Identification identification, ClientThread clientThread) {
-		var id = this.idProvider.newId();
-		System.out.printf("Client \"%s\" joined with id %s.\n", identification.getNickname(), id);
-		this.clients.put(id, clientThread);
-		clientThread.setClientId(id);
-		clientThread.setClientNickname(identification.getNickname());
-		// Immediately add the client to the default channel and send the initial welcome message.
-		var defaultChannel = this.channelManager.getDefaultChannel().orElseThrow();
-		clientThread.sendToClient(new ServerWelcome(id, defaultChannel.getId(), this.getMetaData()));
-		// It is important that we send the welcome message first. The client expects this as the initial response to their identification message.
-		defaultChannel.addClient(clientThread);
-		clientThread.setCurrentChannel(defaultChannel);
-		System.out.println("Moved client " + clientThread + " to " + defaultChannel);
-	}
-
-	/**
-	 * De-registers a client from the server, removing them from any channel
-	 * they're currently in.
-	 * @param clientId The id of the client to remove.
-	 */
-	public void deregisterClient(UUID clientId) {
-		var client = this.clients.remove(clientId);
-		if (client != null) {
-			client.getCurrentChannel().removeClient(client);
-			client.shutdown();
-			System.out.println("Client " + client + " has disconnected.");
-		}
 	}
 
 	/**
@@ -155,13 +123,6 @@ public class ConcordServer implements Runnable {
 		}
 	}
 
-	public List<UserData> getClients() {
-		return this.clients.values().stream()
-				.sorted(Comparator.comparing(ClientThread::getClientNickname))
-				.map(ClientThread::toData)
-				.collect(Collectors.toList());
-	}
-
 	public ServerMetaData getMetaData() {
 		return new ServerMetaData(
 				this.config.getName(),
@@ -170,24 +131,6 @@ public class ConcordServer implements Runnable {
 						.sorted(Comparator.comparing(ServerMetaData.ChannelData::getName))
 						.collect(Collectors.toList())
 		);
-	}
-
-	/**
-	 * Sends a message to every connected client, ignoring any channels. All
-	 * clients connected to this server will receive this message.
-	 * @param message The message to send.
-	 */
-	public void broadcast(Message message) {
-		ByteArrayOutputStream baos = new ByteArrayOutputStream(message.getByteCount());
-		try {
-			this.serializer.writeMessage(message, baos);
-			byte[] data = baos.toByteArray();
-			for (var client : this.clients.values()) {
-				client.sendToClient(data);
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 
 	/**
@@ -201,8 +144,8 @@ public class ConcordServer implements Runnable {
 	 */
 	private void shutdown() {
 		System.out.println("Shutting down the server.");
-		for (var clientId : this.clients.keySet()) {
-			this.deregisterClient(clientId);
+		for (var clientId : this.clientManager.getConnectedIds()) {
+			this.clientManager.deregisterClient(clientId);
 		}
 		this.scheduledExecutorService.shutdown();
 		this.executorService.shutdown();
@@ -231,11 +174,15 @@ public class ConcordServer implements Runnable {
 				ClientThread clientThread = new ClientThread(socket, this);
 				clientThread.start();
 			} catch (IOException e) {
-				System.err.println("Could not accept new client connection: " + e.getMessage());
+				if (!e.getMessage().equalsIgnoreCase("socket closed")) {
+					System.err.println("Could not accept new client connection: " + e.getMessage());
+				}
 			}
 		}
 		this.shutdown();
 	}
+
+
 
 	public static void main(String[] args) throws IOException {
 		var server = new ConcordServer();

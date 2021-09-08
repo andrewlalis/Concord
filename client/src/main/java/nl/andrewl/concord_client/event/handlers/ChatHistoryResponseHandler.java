@@ -6,7 +6,7 @@ import nl.andrewl.concord_core.msg.types.ChatHistoryResponse;
 
 public class ChatHistoryResponseHandler implements MessageHandler<ChatHistoryResponse> {
 	@Override
-	public void handle(ChatHistoryResponse msg, ConcordClient client) throws Exception {
+	public void handle(ChatHistoryResponse msg, ConcordClient client) {
 		client.getModel().getChatHistory().setChats(msg.getMessages());
 	}
 }

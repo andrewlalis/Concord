@@ -35,9 +35,10 @@ public class Serializer {
 		registerType(4, ChatHistoryRequest.class);
 		registerType(5, ChatHistoryResponse.class);
 		registerType(6, ChannelUsersRequest.class);
-		registerType(7, ChannelUsersResponse.class);
+		registerType(7, ServerUsers.class);
 		registerType(8, ServerMetaData.class);
 		registerType(9, Error.class);
+		registerType(10, CreateThread.class);
 	}
 
 	/**
