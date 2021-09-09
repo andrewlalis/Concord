@@ -6,6 +6,7 @@ import com.googlecode.lanterna.input.KeyStroke;
 import nl.andrewl.concord_client.ConcordClient;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainWindow extends BasicWindow {
@@ -49,7 +50,7 @@ public class MainWindow extends BasicWindow {
 		if (nickname == null) return;
 
 		try {
-			var client = new ConcordClient(host, port, nickname);
+			var client = new ConcordClient(host, port, nickname, Path.of("concord-session-tokens.json"));
 			var chatPanel = new ServerPanel(client, this);
 			client.getModel().addListener(chatPanel);
 			new Thread(client).start();

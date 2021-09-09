@@ -49,31 +49,19 @@ public class Channel {
 	}
 
 	/**
-	 * Adds a client to this channel. Also sends an update to all clients,
-	 * including the new one, telling them that a user has joined.
+	 * Adds a client to this channel.
 	 * @param clientThread The client to add.
 	 */
 	public void addClient(ClientThread clientThread) {
 		this.connectedClients.add(clientThread);
-//		try {
-//			this.sendMessage(new ChannelUsersResponse(this.getUserData()));
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
 	}
 
 	/**
-	 * Removes a client from this channel. Also sends an update to all the
-	 * clients that are still connected, telling them that a user has left.
+	 * Removes a client from this channel.
 	 * @param clientThread The client to remove.
 	 */
 	public void removeClient(ClientThread clientThread) {
 		this.connectedClients.remove(clientThread);
-//		try {
-//			this.sendMessage(new ChannelUsersResponse(this.getUserData()));
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
 	}
 
 	/**

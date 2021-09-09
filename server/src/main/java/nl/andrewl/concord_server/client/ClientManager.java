@@ -1,11 +1,15 @@
 package nl.andrewl.concord_server.client;
 
 import nl.andrewl.concord_core.msg.Message;
-import nl.andrewl.concord_core.msg.types.Identification;
-import nl.andrewl.concord_core.msg.types.ServerUsers;
-import nl.andrewl.concord_core.msg.types.ServerWelcome;
-import nl.andrewl.concord_core.msg.types.UserData;
+import nl.andrewl.concord_core.msg.types.Error;
+import nl.andrewl.concord_core.msg.types.*;
 import nl.andrewl.concord_server.ConcordServer;
+import nl.andrewl.concord_server.util.CollectionUtils;
+import nl.andrewl.concord_server.util.StringUtils;
+import org.dizitart.no2.Document;
+import org.dizitart.no2.IndexType;
+import org.dizitart.no2.NitriteCollection;
+import org.dizitart.no2.filters.Filters;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -20,10 +24,17 @@ import java.util.stream.Collectors;
 public class ClientManager {
 	private final ConcordServer server;
 	private final Map<UUID, ClientThread> clients;
+	private final NitriteCollection userCollection;
 
 	public ClientManager(ConcordServer server) {
 		this.server = server;
 		this.clients = new ConcurrentHashMap<>();
+		this.userCollection = server.getDb().getCollection("users");
+		CollectionUtils.ensureIndexes(this.userCollection, Map.of(
+				"id", IndexType.Unique,
+				"sessionToken", IndexType.Unique,
+				"nickname", IndexType.Fulltext
+		));
 	}
 
 	/**
@@ -36,18 +47,29 @@ public class ClientManager {
 	 * @param clientThread The client manager thread.
 	 */
 	public void registerClient(Identification identification, ClientThread clientThread) {
-		var id = this.server.getIdProvider().newId();
-		System.out.printf("Client \"%s\" joined with id %s.\n", identification.getNickname(), id);
-		this.clients.put(id, clientThread);
-		clientThread.setClientId(id);
-		clientThread.setClientNickname(identification.getNickname());
-		// Immediately add the client to the default channel and send the initial welcome message.
+		ClientConnectionData data;
+		try {
+			data = identification.getSessionToken() == null ? getNewClientData(identification) : getClientDataFromDb(identification);
+		} catch (InvalidIdentificationException e) {
+			clientThread.sendToClient(Error.warning(e.getMessage()));
+			return;
+		}
+
+		this.clients.put(data.id, clientThread);
+		clientThread.setClientId(data.id);
+		clientThread.setClientNickname(data.nickname);
 		var defaultChannel = this.server.getChannelManager().getDefaultChannel().orElseThrow();
-		clientThread.sendToClient(new ServerWelcome(id, defaultChannel.getId(), defaultChannel.getName(), this.server.getMetaData()));
+		clientThread.sendToClient(new ServerWelcome(data.id, data.sessionToken, defaultChannel.getId(), defaultChannel.getName(), this.server.getMetaData()));
 		// It is important that we send the welcome message first. The client expects this as the initial response to their identification message.
 		defaultChannel.addClient(clientThread);
 		clientThread.setCurrentChannel(defaultChannel);
-		System.out.println("Moved client " + clientThread + " to " + defaultChannel);
+		System.out.printf(
+				"Client %s(%s) joined%s, and was put into %s.\n",
+				data.nickname,
+				data.id,
+				data.newClient ? " for the first time" : "",
+				defaultChannel
+		);
 		this.broadcast(new ServerUsers(this.getClients()));
 	}
 
@@ -97,5 +119,44 @@ public class ClientManager {
 
 	public Optional<ClientThread> getClientById(UUID id) {
 		return Optional.ofNullable(this.clients.get(id));
+	}
+
+	private static record ClientConnectionData(UUID id, String nickname, String sessionToken, boolean newClient) {}
+
+	private ClientConnectionData getClientDataFromDb(Identification identification) throws InvalidIdentificationException {
+		var cursor = this.userCollection.find(Filters.eq("sessionToken", identification.getSessionToken()));
+		Document doc = cursor.firstOrDefault();
+		if (doc != null) {
+			UUID id = doc.get("id", UUID.class);
+			String nickname = identification.getNickname();
+			if (nickname != null) {
+				doc.put("nickname", nickname);
+			} else {
+				nickname = doc.get("nickname", String.class);
+			}
+			String sessionToken = StringUtils.random(128);
+			doc.put("sessionToken", sessionToken);
+			this.userCollection.update(doc);
+			return new ClientConnectionData(id, nickname, sessionToken, false);
+		} else {
+			throw new InvalidIdentificationException("Invalid session token.");
+		}
+	}
+
+	private ClientConnectionData getNewClientData(Identification identification) throws InvalidIdentificationException {
+		UUID id = this.server.getIdProvider().newId();
+		String nickname = identification.getNickname();
+		if (nickname == null) {
+			throw new InvalidIdentificationException("Missing nickname.");
+		}
+		String sessionToken = StringUtils.random(128);
+		Document doc = new Document(Map.of(
+				"id", id,
+				"nickname", nickname,
+				"sessionToken", sessionToken,
+				"createdAt", System.currentTimeMillis()
+		));
+		this.userCollection.insert(doc);
+		return new ClientConnectionData(id, nickname, sessionToken, true);
 	}
 }

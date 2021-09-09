@@ -1,5 +1,6 @@
 package nl.andrewl.concord_client;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.googlecode.lanterna.gui2.MultiWindowTextGUI;
 import com.googlecode.lanterna.gui2.Window;
 import com.googlecode.lanterna.gui2.WindowBasedTextGUI;
@@ -23,7 +24,11 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ConcordClient implements Runnable {
 	private final Socket socket;
@@ -38,13 +43,13 @@ public class ConcordClient implements Runnable {
 
 	private volatile boolean running;
 
-	public ConcordClient(String host, int port, String nickname) throws IOException {
+	public ConcordClient(String host, int port, String nickname, Path tokensFile) throws IOException {
 		this.eventManager = new EventManager(this);
 		this.socket = new Socket(host, port);
 		this.in = new DataInputStream(this.socket.getInputStream());
 		this.out = new DataOutputStream(this.socket.getOutputStream());
 		this.serializer = new Serializer();
-		this.model = this.initializeConnectionToServer(nickname);
+		this.model = this.initializeConnectionToServer(nickname, tokensFile);
 
 		// Add event listeners.
 		this.eventManager.addHandler(MoveToChannel.class, new ChannelMovedHandler());
@@ -61,16 +66,19 @@ public class ConcordClient implements Runnable {
 	 * placed in by the server.
 	 * @param nickname The nickname to send to the server that it should know
 	 *                 us by.
+	 * @param tokensFile Path to the file where session tokens are stored.
 	 * @return The client model that contains the server's metadata and other
 	 * information that should be kept up-to-date at runtime.
 	 * @throws IOException If an error occurs while reading or writing the
 	 * messages, or if the server sends an unexpected response.
 	 */
-	private ClientModel initializeConnectionToServer(String nickname) throws IOException {
-		this.serializer.writeMessage(new Identification(nickname), this.out);
+	private ClientModel initializeConnectionToServer(String nickname, Path tokensFile) throws IOException {
+		String token = this.getSessionToken(tokensFile);
+		this.serializer.writeMessage(new Identification(nickname, token), this.out);
 		Message reply = this.serializer.readMessage(this.in);
 		if (reply instanceof ServerWelcome welcome) {
 			var model = new ClientModel(welcome.getClientId(), nickname, welcome.getCurrentChannelId(), welcome.getCurrentChannelName(), welcome.getMetaData());
+			this.saveSessionToken(welcome.getSessionToken(), tokensFile);
 			// Start fetching initial data for the channel we were initially put into.
 			this.sendMessage(new ChatHistoryRequest(model.getCurrentChannelId(), ""));
 			return model;
@@ -115,6 +123,44 @@ public class ConcordClient implements Runnable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	/**
+	 * Fetches the session token that this client should use for its currently
+	 * configured server, according to the socket address and port.
+	 * @param tokensFile The file containing the session tokens.
+	 * @return The session token, or null if none was found.
+	 * @throws IOException If the tokens file could not be read.
+	 */
+	@SuppressWarnings("unchecked")
+	private String getSessionToken(Path tokensFile) throws IOException {
+		String token = null;
+		String address = this.socket.getInetAddress().getHostName() + ":" + this.socket.getPort();
+		if (Files.exists(tokensFile)) {
+			ObjectMapper mapper = new ObjectMapper();
+			Map<String, String> sessionTokens = mapper.readValue(Files.newBufferedReader(tokensFile), Map.class);
+			token = sessionTokens.get(address);
+		}
+		return token;
+	}
+
+	/**
+	 * Saves a session token that this client should use the next time it
+	 * connects to the same server.
+	 * @param token The token to save.
+	 * @param tokensFile The file containing the session tokens.
+	 * @throws IOException If the tokens file could not be read or written to.
+	 */
+	@SuppressWarnings("unchecked")
+	private void saveSessionToken(String token, Path tokensFile) throws IOException {
+		String address = this.socket.getInetAddress().getHostName() + ":" + this.socket.getPort();
+		Map<String, String> tokens = new HashMap<>();
+		ObjectMapper mapper = new ObjectMapper();
+		if (Files.exists(tokensFile)) {
+			tokens = mapper.readValue(Files.newBufferedReader(tokensFile), Map.class);
+		}
+		tokens.put(address, token);
+		mapper.writerWithDefaultPrettyPrinter().writeValue(Files.newBufferedWriter(tokensFile), tokens);
 	}
 
 

@@ -4,4 +4,7 @@ module concord_client {
 	requires com.sun.jna;
 	requires com.sun.jna.platform;
 	requires static lombok;
+	requires com.fasterxml.jackson.databind;
+	requires com.fasterxml.jackson.core;
+	requires com.fasterxml.jackson.annotation;
 }

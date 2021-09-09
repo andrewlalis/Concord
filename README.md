@@ -10,7 +10,7 @@ This platform will be organized by many independent servers, each of which will 
 - [x] Private message between users in a server. **No support for private messaging users outside the context of a server.**
 - [ ] Banning users from the server.
 - [ ] Voice channels.
-- [ ] Persistent users. Connect and disconnect from a server multiple times, while keeping your information intact.
+- [x] Persistent users. Connect and disconnect from a server multiple times, while keeping your information intact.
 
 
 Here's a short demonstration of its current features:
