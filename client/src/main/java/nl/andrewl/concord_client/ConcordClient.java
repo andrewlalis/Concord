@@ -16,24 +16,27 @@ import nl.andrewl.concord_client.event.handlers.ServerMetaDataHandler;
 import nl.andrewl.concord_client.event.handlers.ServerUsersHandler;
 import nl.andrewl.concord_client.gui.MainWindow;
 import nl.andrewl.concord_client.model.ClientModel;
+import nl.andrewl.concord_core.msg.Encryption;
 import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.Serializer;
+import nl.andrewl.concord_core.msg.types.Error;
 import nl.andrewl.concord_core.msg.types.*;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.GeneralSecurityException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class ConcordClient implements Runnable {
 	private final Socket socket;
-	private final DataInputStream in;
-	private final DataOutputStream out;
+	private InputStream in;
+	private OutputStream out;
 	private final Serializer serializer;
 
 	@Getter
@@ -46,8 +49,8 @@ public class ConcordClient implements Runnable {
 	public ConcordClient(String host, int port, String nickname, Path tokensFile) throws IOException {
 		this.eventManager = new EventManager(this);
 		this.socket = new Socket(host, port);
-		this.in = new DataInputStream(this.socket.getInputStream());
-		this.out = new DataOutputStream(this.socket.getOutputStream());
+		this.in = this.socket.getInputStream();
+		this.out = this.socket.getOutputStream();
 		this.serializer = new Serializer();
 		this.model = this.initializeConnectionToServer(nickname, tokensFile);
 
@@ -73,6 +76,15 @@ public class ConcordClient implements Runnable {
 	 * messages, or if the server sends an unexpected response.
 	 */
 	private ClientModel initializeConnectionToServer(String nickname, Path tokensFile) throws IOException {
+		try {
+			System.out.println("Initializing end-to-end encryption with the server...");
+			var streams = Encryption.upgrade(this.in, this.out, this.serializer);
+			this.in = streams.first();
+			this.out = streams.second();
+			System.out.println("Successfully established cipher streams.");
+		} catch (GeneralSecurityException e) {
+			throw new IOException(e);
+		}
 		String token = this.getSessionToken(tokensFile);
 		this.serializer.writeMessage(new Identification(nickname, token), this.out);
 		Message reply = this.serializer.readMessage(this.in);
@@ -83,7 +95,7 @@ public class ConcordClient implements Runnable {
 			this.sendMessage(new ChatHistoryRequest(model.getCurrentChannelId(), ""));
 			return model;
 		} else {
-			throw new IOException("Unexpected response from the server after sending identification message.");
+			throw new IOException("Unexpected response from the server after sending identification message: " + reply);
 		}
 	}
 

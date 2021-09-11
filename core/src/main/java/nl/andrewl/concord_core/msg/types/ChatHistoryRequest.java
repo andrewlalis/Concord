@@ -58,6 +58,10 @@ public class ChatHistoryRequest implements Message {
 	private UUID channelId;
 	private String query;
 
+	public ChatHistoryRequest(UUID channelId) {
+		this(channelId, "");
+	}
+
 	public ChatHistoryRequest(UUID channelId, Map<String, String> params) {
 		this.channelId = channelId;
 		this.query = params.entrySet().stream()
@@ -87,7 +91,7 @@ public class ChatHistoryRequest implements Message {
 
 	@Override
 	public int getByteCount() {
-		return UUID_BYTES + Integer.BYTES + getByteSize(this.query);
+		return UUID_BYTES + getByteSize(this.query);
 	}
 
 	@Override

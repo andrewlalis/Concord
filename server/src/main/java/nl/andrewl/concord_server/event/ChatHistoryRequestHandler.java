@@ -59,7 +59,7 @@ public class ChatHistoryRequestHandler implements MessageHandler<ChatHistoryRequ
 	}
 
 	private ChatHistoryResponse getResponse(Channel channel, long count, Long from, Long to) {
-		var col = channel.getServer().getDb().getCollection("channel-" + channel.getId());
+		var col = channel.getMessageCollection();
 		Cursor cursor;
 		FindOptions options = FindOptions.sort("timestamp", SortOrder.Descending).thenLimit(0, (int) count);
 		List<Filter> filters = new ArrayList<>(2);
@@ -74,12 +74,13 @@ public class ChatHistoryRequestHandler implements MessageHandler<ChatHistoryRequ
 		} else {
 			cursor = col.find(Filters.and(filters.toArray(new Filter[0])), options);
 		}
+		System.out.println("Found " + cursor.size() + " chats");
 
 		List<Chat> chats = new ArrayList<>((int) count);
 		for (Document doc : cursor) {
 			chats.add(this.read(doc));
 		}
-		col.close();
+		System.out.println(chats);
 		chats.sort(Comparator.comparingLong(Chat::getTimestamp));
 		return new ChatHistoryResponse(channel.getId(), chats);
 	}

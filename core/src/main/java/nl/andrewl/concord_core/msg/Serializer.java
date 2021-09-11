@@ -39,6 +39,7 @@ public class Serializer {
 		registerType(8, ServerMetaData.class);
 		registerType(9, Error.class);
 		registerType(10, CreateThread.class);
+		registerType(11, KeyData.class);
 	}
 
 	/**

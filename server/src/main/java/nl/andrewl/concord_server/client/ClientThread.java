@@ -2,15 +2,16 @@ package nl.andrewl.concord_server.client;
 
 import lombok.Getter;
 import lombok.Setter;
+import nl.andrewl.concord_core.msg.Encryption;
 import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.types.Identification;
 import nl.andrewl.concord_core.msg.types.UserData;
-import nl.andrewl.concord_server.channel.Channel;
 import nl.andrewl.concord_server.ConcordServer;
+import nl.andrewl.concord_server.channel.Channel;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.util.UUID;
 
@@ -20,8 +21,8 @@ import java.util.UUID;
  */
 public class ClientThread extends Thread {
 	private final Socket socket;
-	private final DataInputStream in;
-	private final DataOutputStream out;
+	private InputStream in;
+	private OutputStream out;
 
 	private final ConcordServer server;
 
@@ -48,8 +49,8 @@ public class ClientThread extends Thread {
 	public ClientThread(Socket socket, ConcordServer server) throws IOException {
 		this.socket = socket;
 		this.server = server;
-		this.in = new DataInputStream(socket.getInputStream());
-		this.out = new DataOutputStream(socket.getOutputStream());
+		this.in = socket.getInputStream();
+		this.out = socket.getOutputStream();
 	}
 
 	/**
@@ -76,6 +77,7 @@ public class ClientThread extends Thread {
 			this.out.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
+			System.err.printf("Could not send to client %s(%s): %s", this.clientId, this.clientNickname, e.getMessage());
 		}
 	}
 
@@ -104,6 +106,7 @@ public class ClientThread extends Thread {
 		while (this.running) {
 			try {
 				var msg = this.server.getSerializer().readMessage(this.in);
+				System.out.println("Received " + msg.getClass().getSimpleName() + " from " + this.clientNickname);
 				this.server.getEventManager().handle(msg, this);
 			} catch (IOException e) {
 				this.running = false;
@@ -131,6 +134,16 @@ public class ClientThread extends Thread {
 	 */
 	private boolean identifyClient() {
 		int attempts = 0;
+		try {
+			System.out.println("Initializing end-to-end encryption with the client...");
+			var streams = Encryption.upgrade(this.in, this.out, server.getSerializer());
+			this.in = streams.first();
+			this.out = streams.second();
+			System.out.println("Successfully established cipher streams.");
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
 		while (attempts < 5) {
 			try {
 				var msg = this.server.getSerializer().readMessage(this.in);

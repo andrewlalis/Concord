@@ -4,13 +4,14 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import nl.andrewl.concord_core.msg.Message;
-import nl.andrewl.concord_core.msg.MessageUtils;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+
+import static nl.andrewl.concord_core.msg.MessageUtils.*;
 
 /**
  * The response that a server sends to a {@link ChatHistoryRequest}. The list of
@@ -25,32 +26,19 @@ public class ChatHistoryResponse implements Message {
 
 	@Override
 	public int getByteCount() {
-		int count = Long.BYTES + Integer.BYTES;
-		for (var message : this.messages) {
-			count += message.getByteCount();
-		}
-		return count;
+		return UUID_BYTES + getByteSize(messages);
 	}
 
 	@Override
 	public void write(DataOutputStream o) throws IOException {
-		MessageUtils.writeUUID(this.channelId, o);
-		o.writeInt(messages.size());
-		for (var message : this.messages) {
-			message.write(o);
-		}
+		writeUUID(this.channelId, o);
+		writeList(this.messages, o);
 	}
 
 	@Override
 	public void read(DataInputStream i) throws IOException {
-		this.channelId = MessageUtils.readUUID(i);
-		int messageCount = i.readInt();
-		Chat[] messages = new Chat[messageCount];
-		for (int k = 0; k < messageCount; k++) {
-			Chat c = new Chat();
-			c.read(i);
-			messages[k] = c;
-		}
-		this.messages = List.of(messages);
+		this.channelId = readUUID(i);
+		System.out.println("Reading list of chats...");
+		this.messages = readList(Chat.class, i);
 	}
 }

@@ -42,7 +42,7 @@ public class Chat implements Message {
 
 	@Override
 	public int getByteCount() {
-		return UUID_BYTES + Long.BYTES + getByteSize(this.senderNickname) + getByteSize(this.message);
+		return 2 * UUID_BYTES + Long.BYTES + getByteSize(this.senderNickname) + getByteSize(this.message);
 	}
 
 	@Override
@@ -61,6 +61,7 @@ public class Chat implements Message {
 		this.senderNickname = readString(i);
 		this.timestamp = i.readLong();
 		this.message = readString(i);
+		System.out.println("Read chat: " + this);
 	}
 
 	@Override
