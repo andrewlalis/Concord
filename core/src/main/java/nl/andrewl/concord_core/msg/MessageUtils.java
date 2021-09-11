@@ -161,13 +161,11 @@ public class MessageUtils {
 		o.writeInt(items.size());
 		for (var i : items) {
 			i.write(o);
-			System.out.println("Wrote " + i);
 		}
 	}
 
 	public static <T extends Message> List<T> readList(Class<T> type, DataInputStream i) throws IOException {
 		int size = i.readInt();
-		System.out.println("Read a size of " + size + " items of type " + type.getSimpleName());
 		try {
 			var constructor = type.getConstructor();
 			List<T> items = new ArrayList<>(size);
@@ -175,7 +173,6 @@ public class MessageUtils {
 				var item = constructor.newInstance();
 				item.read(i);
 				items.add(item);
-				System.out.println("Read item " + (k+1) + " of " + size + ": " + item);
 			}
 			return items;
 		} catch (ReflectiveOperationException e) {

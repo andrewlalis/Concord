@@ -102,11 +102,9 @@ public class ClientThread extends Thread {
 			System.err.println("Could not identify the client; aborting connection.");
 			this.running = false;
 		}
-
 		while (this.running) {
 			try {
 				var msg = this.server.getSerializer().readMessage(this.in);
-				System.out.println("Received " + msg.getClass().getSimpleName() + " from " + this.clientNickname);
 				this.server.getEventManager().handle(msg, this);
 			} catch (IOException e) {
 				this.running = false;
@@ -133,17 +131,11 @@ public class ClientThread extends Thread {
 	 * false otherwise.
 	 */
 	private boolean identifyClient() {
-		int attempts = 0;
-		try {
-			System.out.println("Initializing end-to-end encryption with the client...");
-			var streams = Encryption.upgrade(this.in, this.out, server.getSerializer());
-			this.in = streams.first();
-			this.out = streams.second();
-			System.out.println("Successfully established cipher streams.");
-		} catch (Exception e) {
-			e.printStackTrace();
+		if (!establishEncryption()) {
+			System.err.println("Could not establish end-to-end encryption with the client.");
 			return false;
 		}
+		int attempts = 0;
 		while (attempts < 5) {
 			try {
 				var msg = this.server.getSerializer().readMessage(this.in);
@@ -157,6 +149,26 @@ public class ClientThread extends Thread {
 			attempts++;
 		}
 		return false;
+	}
+
+	/**
+	 * Tries to establish an encrypted connection with a client. This should be
+	 * the first thing which is called upon to interact with the client, because
+	 * it assumes that the client is also attempting to establish a secure
+	 * connection as soon as it opens its socket.
+	 * @return True if an encrypted connection could be established, or false
+	 * otherwise.
+	 */
+	private boolean establishEncryption() {
+		try {
+			var streams = Encryption.upgrade(this.in, this.out, server.getSerializer());
+			this.in = streams.first();
+			this.out = streams.second();
+			return true;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
 	}
 
 	public UserData toData() {

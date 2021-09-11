@@ -19,7 +19,6 @@ import nl.andrewl.concord_client.model.ClientModel;
 import nl.andrewl.concord_core.msg.Encryption;
 import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.Serializer;
-import nl.andrewl.concord_core.msg.types.Error;
 import nl.andrewl.concord_core.msg.types.*;
 
 import java.io.IOException;
@@ -76,15 +75,7 @@ public class ConcordClient implements Runnable {
 	 * messages, or if the server sends an unexpected response.
 	 */
 	private ClientModel initializeConnectionToServer(String nickname, Path tokensFile) throws IOException {
-		try {
-			System.out.println("Initializing end-to-end encryption with the server...");
-			var streams = Encryption.upgrade(this.in, this.out, this.serializer);
-			this.in = streams.first();
-			this.out = streams.second();
-			System.out.println("Successfully established cipher streams.");
-		} catch (GeneralSecurityException e) {
-			throw new IOException(e);
-		}
+		this.establishEncryption();
 		String token = this.getSessionToken(tokensFile);
 		this.serializer.writeMessage(new Identification(nickname, token), this.out);
 		Message reply = this.serializer.readMessage(this.in);
@@ -96,6 +87,24 @@ public class ConcordClient implements Runnable {
 			return model;
 		} else {
 			throw new IOException("Unexpected response from the server after sending identification message: " + reply);
+		}
+	}
+
+	/**
+	 * Establishes an encrypted connection to the server. This should be the
+	 * first method which interacts with the server, since it sends and receives
+	 * specific key information, and all subsequent traffic should be encrypted.
+	 * @throws IOException If encryption could not be established.
+	 */
+	private void establishEncryption() throws IOException {
+		try {
+			System.out.println("Initializing end-to-end encryption with the server...");
+			var streams = Encryption.upgrade(this.in, this.out, this.serializer);
+			this.in = streams.first();
+			this.out = streams.second();
+			System.out.println("Successfully established cipher streams.");
+		} catch (GeneralSecurityException e) {
+			throw new IOException(e);
 		}
 	}
 
@@ -127,7 +136,7 @@ public class ConcordClient implements Runnable {
 				this.eventManager.handle(msg);
 			} catch (IOException e) {
 				e.printStackTrace();
-				this.running = false;
+//				this.running = false;
 			}
 		}
 		try {

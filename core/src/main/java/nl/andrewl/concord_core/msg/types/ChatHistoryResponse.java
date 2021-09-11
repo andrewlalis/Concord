@@ -38,7 +38,6 @@ public class ChatHistoryResponse implements Message {
 	@Override
 	public void read(DataInputStream i) throws IOException {
 		this.channelId = readUUID(i);
-		System.out.println("Reading list of chats...");
 		this.messages = readList(Chat.class, i);
 	}
 }

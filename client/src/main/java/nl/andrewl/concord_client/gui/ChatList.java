@@ -19,7 +19,6 @@ public class ChatList extends AbstractListBox<Chat, ChatList> implements ChatHis
 	@Override
 	public synchronized ChatList addItem(Chat item) {
 		super.addItem(item);
-		this.setSelectedIndex(this.getItemCount() - 1);
 		return this;
 	}
 
@@ -39,6 +38,7 @@ public class ChatList extends AbstractListBox<Chat, ChatList> implements ChatHis
 	public void chatAdded(Chat chat) {
 		this.getTextGUI().getGUIThread().invokeLater(() -> {
 			this.addItem(chat);
+			this.setSelectedIndex(this.getItemCount() - 1);
 		});
 	}
 
@@ -56,11 +56,10 @@ public class ChatList extends AbstractListBox<Chat, ChatList> implements ChatHis
 	public void chatUpdated(ChatHistory history) {
 		this.getTextGUI().getGUIThread().invokeLater(() -> {
 			this.clearItems();
-			System.out.println("Cleared chats");
 			for (var chat : history.getChats()) {
-				System.out.println("Adding chat: " + chat);
 				this.addItem(chat);
 			}
+			this.setSelectedIndex(this.getItemCount() - 1);
 		});
 	}
 }

@@ -61,7 +61,6 @@ public class Chat implements Message {
 		this.senderNickname = readString(i);
 		this.timestamp = i.readLong();
 		this.message = readString(i);
-		System.out.println("Read chat: " + this);
 	}
 
 	@Override

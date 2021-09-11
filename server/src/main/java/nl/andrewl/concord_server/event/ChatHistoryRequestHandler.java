@@ -58,6 +58,15 @@ public class ChatHistoryRequestHandler implements MessageHandler<ChatHistoryRequ
 		client.sendToClient(new ChatHistoryResponse(channel.getId(), chats));
 	}
 
+	/**
+	 * Gets a response for a standard chat history request, using a standard set
+	 * of parameters.
+	 * @param channel The channel to get chat history from.
+	 * @param count The number of messages to retrieve.
+	 * @param from If not null, only include messages made after this timestamp.
+	 * @param to If not null, only include messages made before this timestamp.
+	 * @return A chat history response.
+	 */
 	private ChatHistoryResponse getResponse(Channel channel, long count, Long from, Long to) {
 		var col = channel.getMessageCollection();
 		Cursor cursor;
@@ -74,14 +83,12 @@ public class ChatHistoryRequestHandler implements MessageHandler<ChatHistoryRequ
 		} else {
 			cursor = col.find(Filters.and(filters.toArray(new Filter[0])), options);
 		}
-		System.out.println("Found " + cursor.size() + " chats");
 
 		List<Chat> chats = new ArrayList<>((int) count);
 		for (Document doc : cursor) {
 			chats.add(this.read(doc));
 		}
-		System.out.println(chats);
-		chats.sort(Comparator.comparingLong(Chat::getTimestamp));
+		Collections.reverse(chats);
 		return new ChatHistoryResponse(channel.getId(), chats);
 	}
 
