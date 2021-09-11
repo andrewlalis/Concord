@@ -34,8 +34,8 @@ import java.util.Map;
 
 public class ConcordClient implements Runnable {
 	private final Socket socket;
-	private InputStream in;
-	private OutputStream out;
+	private final InputStream in;
+	private final OutputStream out;
 	private final Serializer serializer;
 
 	@Getter
@@ -48,9 +48,14 @@ public class ConcordClient implements Runnable {
 	public ConcordClient(String host, int port, String nickname, Path tokensFile) throws IOException {
 		this.eventManager = new EventManager(this);
 		this.socket = new Socket(host, port);
-		this.in = this.socket.getInputStream();
-		this.out = this.socket.getOutputStream();
 		this.serializer = new Serializer();
+		try {
+			var streams = Encryption.upgrade(socket.getInputStream(), socket.getOutputStream(), this.serializer);
+			this.in = streams.first();
+			this.out = streams.second();
+		} catch (GeneralSecurityException e) {
+			throw new IOException("Could not establish secure connection to the server.", e);
+		}
 		this.model = this.initializeConnectionToServer(nickname, tokensFile);
 
 		// Add event listeners.
@@ -75,7 +80,6 @@ public class ConcordClient implements Runnable {
 	 * messages, or if the server sends an unexpected response.
 	 */
 	private ClientModel initializeConnectionToServer(String nickname, Path tokensFile) throws IOException {
-		this.establishEncryption();
 		String token = this.getSessionToken(tokensFile);
 		this.serializer.writeMessage(new Identification(nickname, token), this.out);
 		Message reply = this.serializer.readMessage(this.in);
@@ -87,24 +91,6 @@ public class ConcordClient implements Runnable {
 			return model;
 		} else {
 			throw new IOException("Unexpected response from the server after sending identification message: " + reply);
-		}
-	}
-
-	/**
-	 * Establishes an encrypted connection to the server. This should be the
-	 * first method which interacts with the server, since it sends and receives
-	 * specific key information, and all subsequent traffic should be encrypted.
-	 * @throws IOException If encryption could not be established.
-	 */
-	private void establishEncryption() throws IOException {
-		try {
-			System.out.println("Initializing end-to-end encryption with the server...");
-			var streams = Encryption.upgrade(this.in, this.out, this.serializer);
-			this.in = streams.first();
-			this.out = streams.second();
-			System.out.println("Successfully established cipher streams.");
-		} catch (GeneralSecurityException e) {
-			throw new IOException(e);
 		}
 	}
 

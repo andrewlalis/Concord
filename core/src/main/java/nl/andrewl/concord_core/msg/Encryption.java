@@ -19,6 +19,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Utility class for handling the establishment of encrypted communication.
+ */
 public class Encryption {
 	public static Pair<CipherInputStream, CipherOutputStream> upgrade(
 			InputStream in,
