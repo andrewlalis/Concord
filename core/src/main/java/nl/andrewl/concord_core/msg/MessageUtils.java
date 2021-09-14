@@ -15,14 +15,6 @@ import java.util.UUID;
 public class MessageUtils {
 	public static final int UUID_BYTES = 2 * Long.BYTES;
 
-	public static final char MIN_HIGH_SURROGATE = '\uD800';
-	public static final char MAX_HIGH_SURROGATE = '\uDBFF';
-	public static final char MIN_LOW_SURROGATE = '\uDC00';
-	public static final char MAX_LOW_SURROGATE = '\uDFFF';
-	public static final int MIN_SUPPLEMENTARY_CODE_POINT = 0x010000;
-	private static final int SUR_CALC = (MIN_SUPPLEMENTARY_CODE_POINT - (MIN_HIGH_SURROGATE << 10)) - MIN_LOW_SURROGATE;
-
-
 	/**
 	 * Gets the number of bytes that the given string will occupy when it is
 	 * serialized.
@@ -31,53 +23,6 @@ public class MessageUtils {
 	 */
 	public static int getByteSize(String s) {
 		return Integer.BYTES + (s == null ? 0 : s.getBytes(StandardCharsets.UTF_8).length);
-//		int length = s.length();
-//		int i = 0;
-//		int counter = 0;
-//
-//		char c;
-//		while (i < length && (c = s.charAt(i)) < '\u0080') {
-//			// ascii fast loop;
-//			counter++;
-//			i++;
-//		}
-//
-//		while (i < length) {
-//			c = s.charAt(i++);
-//			if (c < 0x80) {
-//				counter++;
-//			} else if (c < 0x800) {
-//				counter += 2;
-//			} else if (Character.isSurrogate(c)) {
-//				int uc = -1;
-//				char c2;
-//				if (isHighSurrogate(c) && i < length && isLowSurrogate(c2 = s.charAt(i))) {
-//					uc = toCodePoint(c, c2);
-//				}
-//				if (uc < 0) {
-//
-//				} else {
-//					counter += 4;
-//					i++;  // 2 chars
-//				}
-//			} else {
-//				// 3 bytes, 16 bits
-//				counter += 3;
-//			}
-//		}
-//
-//		return Integer.BYTES + counter;
-	}
-	public static boolean isHighSurrogate(char ch) {
-		return ch >= MIN_HIGH_SURROGATE && ch < (MAX_HIGH_SURROGATE + 1);
-	}
-
-	public static boolean isLowSurrogate(char ch) {
-		return ch >= MIN_LOW_SURROGATE && ch < (MAX_LOW_SURROGATE + 1);
-	}
-
-	public static int toCodePoint(int high, int low) {
-		return ((high << 10) + low) + SUR_CALC;
 	}
 
 	/**
@@ -116,6 +61,13 @@ public class MessageUtils {
 		return new String(data, StandardCharsets.UTF_8);
 	}
 
+	/**
+	 * Writes an enum value to the given stream as the integer ordinal value of
+	 * the enum value, or -1 if the value is null.
+	 * @param value The value to write.
+	 * @param o The output stream.
+	 * @throws IOException If an error occurs while writing.
+	 */
 	public static void writeEnum(Enum<?> value, DataOutputStream o) throws IOException {
 		if (value == null) {
 			o.writeInt(-1);
@@ -124,6 +76,15 @@ public class MessageUtils {
 		}
 	}
 
+	/**
+	 * Reads an enum value from the given stream, assuming that the value is
+	 * represented by an integer ordinal value.
+	 * @param e The type of enum that is to be read.
+	 * @param i The input stream to read from.
+	 * @param <T> The enum type.
+	 * @return The enum value, or null if -1 was read.
+	 * @throws IOException If an error occurs while reading.
+	 */
 	public static <T extends Enum<?>> T readEnum(Class<T> e, DataInputStream i) throws IOException {
 		int ordinal = i.readInt();
 		if (ordinal == -1) return null;

@@ -8,7 +8,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * This class is responsible for reading and writing messages from streams.
+ * This class is responsible for reading and writing messages from streams. It
+ * also defines the set of supported message types, and their associated byte
+ * identifiers, via the {@link Serializer#registerType(int, Class)} method.
  */
 public class Serializer {
 	/**
