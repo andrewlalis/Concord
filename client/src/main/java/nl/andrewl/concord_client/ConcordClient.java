@@ -20,6 +20,12 @@ import nl.andrewl.concord_core.msg.Encryption;
 import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.Serializer;
 import nl.andrewl.concord_core.msg.types.*;
+import nl.andrewl.concord_core.msg.types.channel.MoveToChannel;
+import nl.andrewl.concord_core.msg.types.chat.Chat;
+import nl.andrewl.concord_core.msg.types.chat.ChatHistoryRequest;
+import nl.andrewl.concord_core.msg.types.chat.ChatHistoryResponse;
+import nl.andrewl.concord_core.msg.types.client_setup.Identification;
+import nl.andrewl.concord_core.msg.types.client_setup.ServerWelcome;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -84,8 +90,8 @@ public class ConcordClient implements Runnable {
 		this.serializer.writeMessage(new Identification(nickname, token), this.out);
 		Message reply = this.serializer.readMessage(this.in);
 		if (reply instanceof ServerWelcome welcome) {
-			var model = new ClientModel(welcome.getClientId(), nickname, welcome.getCurrentChannelId(), welcome.getCurrentChannelName(), welcome.getMetaData());
-			this.saveSessionToken(welcome.getSessionToken(), tokensFile);
+			var model = new ClientModel(welcome.clientId(), nickname, welcome.currentChannelId(), welcome.currentChannelName(), welcome.metaData());
+			this.saveSessionToken(welcome.sessionToken(), tokensFile);
 			// Start fetching initial data for the channel we were initially put into.
 			this.sendMessage(new ChatHistoryRequest(model.getCurrentChannelId(), ""));
 			return model;

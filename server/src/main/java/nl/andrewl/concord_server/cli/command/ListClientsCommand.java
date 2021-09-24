@@ -15,7 +15,7 @@ public class ListClientsCommand implements ServerCliCommand {
 		} else {
 			StringBuilder sb = new StringBuilder("Online Users:\n");
 			for (var userData : users) {
-				sb.append("\t").append(userData.getName()).append(" (").append(userData.getId()).append(")\n");
+				sb.append("\t").append(userData.name()).append(" (").append(userData.id()).append(")\n");
 			}
 			System.out.print(sb);
 		}

@@ -1,11 +1,5 @@
 package nl.andrewl.concord_core.msg;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.UUID;
-
 /**
  * Represents any message which can be sent over the network.
  * <p>
@@ -14,26 +8,12 @@ import java.util.UUID;
  * </p>
  */
 public interface Message {
-	/**
-	 * @return The exact number of bytes that this message will use when written
-	 * to a stream.
-	 */
-	int getByteCount();
+	@SuppressWarnings("unchecked")
+	default <T extends Message> MessageType<T> getType() {
+		return MessageType.get((Class<T>) this.getClass());
+	}
 
-	/**
-	 * Writes this message to the given output stream.
-	 * @param o The output stream to write to.
-	 * @throws IOException If an error occurs while writing.
-	 */
-	void write(DataOutputStream o) throws IOException;
-
-	/**
-	 * Reads all of this message's properties from the given input stream.
-	 * <p>
-	 *     The single byte type identifier has already been read.
-	 * </p>
-	 * @param i The input stream to read from.
-	 * @throws IOException If an error occurs while reading.
-	 */
-	void read(DataInputStream i) throws IOException;
+	default int byteSize() {
+		return getType().byteSizeFunction().apply(this);
+	}
 }

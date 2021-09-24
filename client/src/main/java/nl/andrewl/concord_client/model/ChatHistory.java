@@ -2,7 +2,7 @@ package nl.andrewl.concord_client.model;
 
 import lombok.Getter;
 import nl.andrewl.concord_client.event.ChatHistoryListener;
-import nl.andrewl.concord_core.msg.types.Chat;
+import nl.andrewl.concord_core.msg.types.chat.Chat;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;

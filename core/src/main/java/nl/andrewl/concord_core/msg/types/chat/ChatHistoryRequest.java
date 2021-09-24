@@ -1,19 +1,11 @@
-package nl.andrewl.concord_core.msg.types;
+package nl.andrewl.concord_core.msg.types.chat;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import nl.andrewl.concord_core.msg.Message;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import static nl.andrewl.concord_core.msg.MessageUtils.*;
 
 /**
  * A message which clients can send to the server to request some messages from
@@ -51,20 +43,15 @@ import static nl.andrewl.concord_core.msg.MessageUtils.*;
  *     the list of messages is always sorted by the timestamp.
  * </p>
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class ChatHistoryRequest implements Message {
-	private UUID channelId;
-	private String query;
-
+public record ChatHistoryRequest (UUID channelId, String query) implements Message {
 	public ChatHistoryRequest(UUID channelId) {
 		this(channelId, "");
 	}
 
 	public ChatHistoryRequest(UUID channelId, Map<String, String> params) {
-		this.channelId = channelId;
-		this.query = params.entrySet().stream()
+		this(
+			channelId,
+			params.entrySet().stream()
 				.map(entry -> {
 					if (entry.getKey().contains(";") || entry.getKey().contains("=")) {
 						throw new IllegalArgumentException("Parameter key \"" + entry.getKey() + "\" contains invalid characters.");
@@ -74,7 +61,8 @@ public class ChatHistoryRequest implements Message {
 					}
 					return entry.getKey() + "=" + entry.getValue();
 				})
-				.collect(Collectors.joining(";"));
+				.collect(Collectors.joining(";"))
+		);
 	}
 
 	/**
@@ -91,22 +79,5 @@ public class ChatHistoryRequest implements Message {
 			params.put(keyAndValue[0], keyAndValue[1]);
 		}
 		return params;
-	}
-
-	@Override
-	public int getByteCount() {
-		return UUID_BYTES + getByteSize(this.query);
-	}
-
-	@Override
-	public void write(DataOutputStream o) throws IOException {
-		writeUUID(this.channelId, o);
-		writeString(this.query, o);
-	}
-
-	@Override
-	public void read(DataInputStream i) throws IOException {
-		this.channelId = readUUID(i);
-		this.query = readString(i);
 	}
 }

@@ -1,11 +1,10 @@
 package nl.andrewl.concord_server.event;
 
 import nl.andrewl.concord_core.msg.types.Error;
-import nl.andrewl.concord_core.msg.types.MoveToChannel;
+import nl.andrewl.concord_core.msg.types.channel.MoveToChannel;
 import nl.andrewl.concord_server.ConcordServer;
 import nl.andrewl.concord_server.client.ClientThread;
 
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -17,11 +16,11 @@ import java.util.Set;
 public class ChannelMoveHandler implements MessageHandler<MoveToChannel> {
 	@Override
 	public void handle(MoveToChannel msg, ClientThread client, ConcordServer server) {
-		var optionalChannel = server.getChannelManager().getChannelById(msg.getId());
+		var optionalChannel = server.getChannelManager().getChannelById(msg.id());
 		if (optionalChannel.isPresent()) {
 			server.getChannelManager().moveToChannel(client, optionalChannel.get());
 		} else {
-			var optionalClient = server.getClientManager().getClientById(msg.getId());
+			var optionalClient = server.getClientManager().getClientById(msg.id());
 			if (optionalClient.isPresent()) {
 				var privateChannel = server.getChannelManager().getPrivateChannel(Set.of(
 						client.getClientId(),

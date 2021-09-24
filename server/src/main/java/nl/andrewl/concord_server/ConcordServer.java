@@ -22,7 +22,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * The main server implementation, which handles accepting new clients.
@@ -128,8 +127,8 @@ public class ConcordServer implements Runnable {
 				this.config.getName(),
 				this.channelManager.getChannels().stream()
 						.map(channel -> new ServerMetaData.ChannelData(channel.getId(), channel.getName()))
-						.sorted(Comparator.comparing(ServerMetaData.ChannelData::getName))
-						.collect(Collectors.toList())
+						.sorted(Comparator.comparing(ServerMetaData.ChannelData::name))
+						.toList().toArray(new ServerMetaData.ChannelData[0])
 		);
 	}
 

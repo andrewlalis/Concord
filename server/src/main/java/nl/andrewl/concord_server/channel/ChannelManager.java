@@ -1,6 +1,6 @@
 package nl.andrewl.concord_server.channel;
 
-import nl.andrewl.concord_core.msg.types.MoveToChannel;
+import nl.andrewl.concord_core.msg.types.channel.MoveToChannel;
 import nl.andrewl.concord_server.ConcordServer;
 import nl.andrewl.concord_server.client.ClientThread;
 import nl.andrewl.concord_server.util.CollectionUtils;

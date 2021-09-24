@@ -1,7 +1,7 @@
 package nl.andrewl.concord_server.event;
 
-import nl.andrewl.concord_core.msg.types.Chat;
 import nl.andrewl.concord_core.msg.types.Error;
+import nl.andrewl.concord_core.msg.types.chat.Chat;
 import nl.andrewl.concord_server.ConcordServer;
 import nl.andrewl.concord_server.client.ClientThread;
 import org.dizitart.no2.Document;
@@ -17,7 +17,7 @@ import java.util.Map;
 public class ChatHandler implements MessageHandler<Chat> {
 	@Override
 	public void handle(Chat msg, ClientThread client, ConcordServer server) throws IOException {
-		if (msg.getMessage().length() > server.getConfig().getMaxMessageLength()) {
+		if (msg.message().length() > server.getConfig().getMaxMessageLength()) {
 			client.getCurrentChannel().sendMessage(Error.warning("Message is too long."));
 			return;
 		}
@@ -27,17 +27,17 @@ public class ChatHandler implements MessageHandler<Chat> {
 		malicious UUID, so we overwrite it with a server-generated id which we
 		know is safe.
 		 */
-		msg.setId(server.getIdProvider().newId());
+		msg = new Chat(server.getIdProvider().newId(), msg);
 		var collection = client.getCurrentChannel().getMessageCollection();
 		Document doc = new Document(Map.of(
-				"id", msg.getId(),
-				"senderId", msg.getSenderId(),
-				"senderNickname", msg.getSenderNickname(),
-				"timestamp", msg.getTimestamp(),
-				"message", msg.getMessage()
+				"id", msg.id(),
+				"senderId", msg.senderId(),
+				"senderNickname", msg.senderNickname(),
+				"timestamp", msg.timestamp(),
+				"message", msg.message()
 		));
 		collection.insert(doc);
-		System.out.printf("#%s | %s: %s\n", client.getCurrentChannel(), client.getClientNickname(), msg.getMessage());
+		System.out.printf("#%s | %s: %s\n", client.getCurrentChannel(), client.getClientNickname(), msg.message());
 		client.getCurrentChannel().sendMessage(msg);
 	}
 }
