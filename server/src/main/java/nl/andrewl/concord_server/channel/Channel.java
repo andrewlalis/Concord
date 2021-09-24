@@ -76,7 +76,7 @@ public class Channel implements Comparable<Channel> {
 	 * @throws IOException If an error occurs.
 	 */
 	public void sendMessage(Message msg) throws IOException {
-		ByteArrayOutputStream baos = new ByteArrayOutputStream(msg.getByteCount() + 1);
+		ByteArrayOutputStream baos = new ByteArrayOutputStream(msg.byteSize() + 1);
 		this.server.getSerializer().writeMessage(msg, baos);
 		byte[] data = baos.toByteArray();
 		for (var client : this.connectedClients) {
@@ -93,7 +93,7 @@ public class Channel implements Comparable<Channel> {
 		for (var clientThread : this.getConnectedClients()) {
 			users.add(clientThread.toData());
 		}
-		users.sort(Comparator.comparing(UserData::getName));
+		users.sort(Comparator.comparing(UserData::name));
 		return users;
 	}
 

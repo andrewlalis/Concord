@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import nl.andrewl.concord_core.msg.Encryption;
 import nl.andrewl.concord_core.msg.Message;
-import nl.andrewl.concord_core.msg.types.Identification;
+import nl.andrewl.concord_core.msg.types.client_setup.Identification;
 import nl.andrewl.concord_core.msg.types.UserData;
 import nl.andrewl.concord_server.ConcordServer;
 import nl.andrewl.concord_server.channel.Channel;

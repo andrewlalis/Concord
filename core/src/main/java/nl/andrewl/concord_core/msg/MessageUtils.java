@@ -1,11 +1,6 @@
 package nl.andrewl.concord_core.msg;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -14,6 +9,7 @@ import java.util.UUID;
  */
 public class MessageUtils {
 	public static final int UUID_BYTES = 2 * Long.BYTES;
+	public static final int ENUM_BYTES = Integer.BYTES;
 
 	/**
 	 * Gets the number of bytes that the given string will occupy when it is
@@ -26,118 +22,54 @@ public class MessageUtils {
 	}
 
 	/**
-	 * Writes a string to the given output stream using a length-prefixed format
-	 * where an integer length precedes the string's bytes, which are encoded in
-	 * UTF-8.
-	 * @param s The string to write.
-	 * @param o The output stream to write to.
-	 * @throws IOException If the stream could not be written to.
+	 * Gets the number of bytes that all the given strings will occupy when
+	 * serialized with a length-prefix encoding.
+	 * @param strings The set of strings.
+	 * @return The total byte size.
 	 */
-	public static void writeString(String s, DataOutputStream o) throws IOException {
-		if (s == null) {
-			o.writeInt(-1);
-		} else {
-			o.writeInt(s.length());
-			o.write(s.getBytes(StandardCharsets.UTF_8));
+	public static int getByteSize(String... strings) {
+		int size = 0;
+		for (var s : strings) {
+			size += getByteSize(s);
 		}
+		return size;
 	}
 
-	/**
-	 * Reads a string from the given input stream, using a length-prefixed
-	 * format, where an integer length precedes the string's bytes, which are
-	 * encoded in UTF-8.
-	 * @param i The input stream to read from.
-	 * @return The string which was read.
-	 * @throws IOException If the stream could not be read, or if the string is
-	 * malformed.
-	 */
-	public static String readString(DataInputStream i) throws IOException {
-		int length = i.readInt();
-		if (length == -1) return null;
-		if (length == 0) return "";
-		byte[] data = new byte[length];
-		int read = i.read(data);
-		if (read != length) throw new IOException("Not all bytes of a string of length " + length + " could be read.");
-		return new String(data, StandardCharsets.UTF_8);
-	}
-
-	/**
-	 * Writes an enum value to the given stream as the integer ordinal value of
-	 * the enum value, or -1 if the value is null.
-	 * @param value The value to write.
-	 * @param o The output stream.
-	 * @throws IOException If an error occurs while writing.
-	 */
-	public static void writeEnum(Enum<?> value, DataOutputStream o) throws IOException {
-		if (value == null) {
-			o.writeInt(-1);
-		} else {
-			o.writeInt(value.ordinal());
-		}
-	}
-
-	/**
-	 * Reads an enum value from the given stream, assuming that the value is
-	 * represented by an integer ordinal value.
-	 * @param e The type of enum that is to be read.
-	 * @param i The input stream to read from.
-	 * @param <T> The enum type.
-	 * @return The enum value, or null if -1 was read.
-	 * @throws IOException If an error occurs while reading.
-	 */
-	public static <T extends Enum<?>> T readEnum(Class<T> e, DataInputStream i) throws IOException {
-		int ordinal = i.readInt();
-		if (ordinal == -1) return null;
-		return e.getEnumConstants()[ordinal];
-	}
-
-	public static void writeUUID(UUID value, DataOutputStream o) throws IOException {
-		if (value == null) {
-			o.writeLong(-1);
-			o.writeLong(-1);
-		} else {
-			o.writeLong(value.getMostSignificantBits());
-			o.writeLong(value.getLeastSignificantBits());
-		}
-	}
-
-	public static UUID readUUID(DataInputStream i) throws IOException {
-		long a = i.readLong();
-		long b = i.readLong();
-		if (a == -1 && b == -1) {
-			return null;
-		}
-		return new UUID(a, b);
-	}
-
-	public static int getByteSize(List<? extends Message> items) {
+	public static <T extends Message> int getByteSize(T[] items) {
 		int count = Integer.BYTES;
 		for (var item : items) {
-			count += item.getByteCount();
+			count += item.byteSize();
 		}
 		return count;
 	}
 
-	public static void writeList(List<? extends Message> items, DataOutputStream o) throws IOException {
-		o.writeInt(items.size());
-		for (var i : items) {
-			i.write(o);
+	public static int getByteSize(Object o) {
+		if (o instanceof Integer) {
+			return Integer.BYTES;
+		} else if (o instanceof Long) {
+			return Long.BYTES;
+		} else if (o instanceof String) {
+			return getByteSize((String) o);
+		} else if (o instanceof UUID) {
+			return UUID_BYTES;
+		} else if (o instanceof Enum<?>) {
+			return ENUM_BYTES;
+		} else if (o instanceof byte[]) {
+			return Integer.BYTES + ((byte[]) o).length;
+		} else if (o.getClass().isArray() && Message.class.isAssignableFrom(o.getClass().getComponentType())) {
+			return getByteSize((Message[]) o);
+		} else if (o instanceof Message) {
+			return ((Message) o).byteSize();
+		} else {
+			throw new IllegalArgumentException("Unsupported object type: " + o.getClass().getSimpleName());
 		}
 	}
 
-	public static <T extends Message> List<T> readList(Class<T> type, DataInputStream i) throws IOException {
-		int size = i.readInt();
-		try {
-			var constructor = type.getConstructor();
-			List<T> items = new ArrayList<>(size);
-			for (int k = 0; k < size; k++) {
-				var item = constructor.newInstance();
-				item.read(i);
-				items.add(item);
-			}
-			return items;
-		} catch (ReflectiveOperationException e) {
-			throw new IOException(e);
+	public static int getByteSize(Object... objects) {
+		int size = 0;
+		for (var o : objects) {
+			size += getByteSize(o);
 		}
+		return size;
 	}
 }

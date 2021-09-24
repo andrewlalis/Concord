@@ -5,7 +5,7 @@ import com.googlecode.lanterna.gui2.Direction;
 import com.googlecode.lanterna.gui2.LinearLayout;
 import com.googlecode.lanterna.gui2.Panel;
 import nl.andrewl.concord_client.ConcordClient;
-import nl.andrewl.concord_core.msg.types.MoveToChannel;
+import nl.andrewl.concord_core.msg.types.channel.MoveToChannel;
 import nl.andrewl.concord_core.msg.types.UserData;
 
 import java.io.IOException;
@@ -22,11 +22,11 @@ public class UserList extends Panel {
 	public void updateUsers(List<UserData> usersResponse) {
 		this.removeAllComponents();
 		for (var user : usersResponse) {
-			Button b = new Button(user.getName(), () -> {
-				if (!client.getModel().getId().equals(user.getId())) {
-					System.out.println("Opening DM channel with user " + user.getName() + ", id: " + user.getId());
+			Button b = new Button(user.name(), () -> {
+				if (!client.getModel().getId().equals(user.id())) {
+					System.out.println("Opening DM channel with user " + user.name() + ", id: " + user.id());
 					try {
-						client.sendMessage(new MoveToChannel(user.getId()));
+						client.sendMessage(new MoveToChannel(user.id()));
 					} catch (IOException e) {
 						e.printStackTrace();
 					}

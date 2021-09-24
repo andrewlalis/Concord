@@ -2,7 +2,10 @@ package nl.andrewl.concord_server.client;
 
 import nl.andrewl.concord_core.msg.Message;
 import nl.andrewl.concord_core.msg.types.Error;
-import nl.andrewl.concord_core.msg.types.*;
+import nl.andrewl.concord_core.msg.types.ServerUsers;
+import nl.andrewl.concord_core.msg.types.UserData;
+import nl.andrewl.concord_core.msg.types.client_setup.Identification;
+import nl.andrewl.concord_core.msg.types.client_setup.ServerWelcome;
 import nl.andrewl.concord_server.ConcordServer;
 import nl.andrewl.concord_server.util.CollectionUtils;
 import nl.andrewl.concord_server.util.StringUtils;
@@ -54,7 +57,7 @@ public class ClientManager {
 	public void handleLogIn(Identification identification, ClientThread clientThread) {
 		ClientConnectionData data;
 		try {
-			data = identification.getSessionToken() == null ? getNewClientData(identification) : getClientDataFromDb(identification);
+			data = identification.sessionToken() == null ? getNewClientData(identification) : getClientDataFromDb(identification);
 		} catch (InvalidIdentificationException e) {
 			clientThread.sendToClient(Error.warning(e.getMessage()));
 			return;
@@ -75,7 +78,7 @@ public class ClientManager {
 				data.newClient ? " for the first time" : "",
 				defaultChannel
 		);
-		this.broadcast(new ServerUsers(this.getClients()));
+		this.broadcast(new ServerUsers(this.getClients().toArray(new UserData[0])));
 	}
 
 	/**
@@ -89,7 +92,7 @@ public class ClientManager {
 			client.getCurrentChannel().removeClient(client);
 			client.shutdown();
 			System.out.println("Client " + client + " has disconnected.");
-			this.broadcast(new ServerUsers(this.getClients()));
+			this.broadcast(new ServerUsers(this.getClients().toArray(new UserData[0])));
 		}
 	}
 
@@ -99,7 +102,7 @@ public class ClientManager {
 	 * @param message The message to send.
 	 */
 	public void broadcast(Message message) {
-		ByteArrayOutputStream baos = new ByteArrayOutputStream(message.getByteCount());
+		ByteArrayOutputStream baos = new ByteArrayOutputStream(message.byteSize());
 		try {
 			this.server.getSerializer().writeMessage(message, baos);
 			byte[] data = baos.toByteArray();
@@ -129,11 +132,11 @@ public class ClientManager {
 	private static record ClientConnectionData(UUID id, String nickname, String sessionToken, boolean newClient) {}
 
 	private ClientConnectionData getClientDataFromDb(Identification identification) throws InvalidIdentificationException {
-		var cursor = this.userCollection.find(Filters.eq("sessionToken", identification.getSessionToken()));
+		var cursor = this.userCollection.find(Filters.eq("sessionToken", identification.sessionToken()));
 		Document doc = cursor.firstOrDefault();
 		if (doc != null) {
 			UUID id = doc.get("id", UUID.class);
-			String nickname = identification.getNickname();
+			String nickname = identification.nickname();
 			if (nickname != null) {
 				doc.put("nickname", nickname);
 			} else {
@@ -150,7 +153,7 @@ public class ClientManager {
 
 	private ClientConnectionData getNewClientData(Identification identification) throws InvalidIdentificationException {
 		UUID id = this.server.getIdProvider().newId();
-		String nickname = identification.getNickname();
+		String nickname = identification.nickname();
 		if (nickname == null) {
 			throw new InvalidIdentificationException("Missing nickname.");
 		}

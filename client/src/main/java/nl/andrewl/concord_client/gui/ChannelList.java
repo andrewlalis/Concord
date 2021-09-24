@@ -5,7 +5,7 @@ import com.googlecode.lanterna.gui2.Direction;
 import com.googlecode.lanterna.gui2.LinearLayout;
 import com.googlecode.lanterna.gui2.Panel;
 import nl.andrewl.concord_client.ConcordClient;
-import nl.andrewl.concord_core.msg.types.MoveToChannel;
+import nl.andrewl.concord_core.msg.types.channel.MoveToChannel;
 
 import java.io.IOException;
 
@@ -22,15 +22,15 @@ public class ChannelList extends Panel {
 
 	public void setChannels() {
 		this.removeAllComponents();
-		for (var channel : this.client.getModel().getServerMetaData().getChannels()) {
-			String name = channel.getName();
-			if (client.getModel().getCurrentChannelId().equals(channel.getId())) {
+		for (var channel : this.client.getModel().getServerMetaData().channels()) {
+			String name = channel.name();
+			if (client.getModel().getCurrentChannelId().equals(channel.id())) {
 				name = "*" + name;
 			}
 			Button b = new Button(name, () -> {
-				if (!client.getModel().getCurrentChannelId().equals(channel.getId())) {
+				if (!client.getModel().getCurrentChannelId().equals(channel.id())) {
 					try {
-						client.sendMessage(new MoveToChannel(channel.getId()));
+						client.sendMessage(new MoveToChannel(channel.id()));
 					} catch (IOException e) {
 						e.printStackTrace();
 					}

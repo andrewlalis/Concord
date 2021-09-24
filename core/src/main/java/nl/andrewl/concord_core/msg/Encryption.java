@@ -1,6 +1,6 @@
 package nl.andrewl.concord_core.msg;
 
-import nl.andrewl.concord_core.msg.types.KeyData;
+import nl.andrewl.concord_core.msg.types.client_setup.KeyData;
 import nl.andrewl.concord_core.util.Pair;
 
 import javax.crypto.Cipher;
@@ -64,20 +64,20 @@ public class Encryption {
 		// Receive and decode client's unencrypted key data.
 		KeyData clientKeyData = (KeyData) serializer.readMessage(in);
 		PublicKey clientPublicKey = KeyFactory.getInstance("EC")
-				.generatePublic(new X509EncodedKeySpec(clientKeyData.getPublicKey()));
+				.generatePublic(new X509EncodedKeySpec(clientKeyData.publicKey()));
 
 		// Compute secret key from client's public key and our private key.
 		KeyAgreement ka = KeyAgreement.getInstance("ECDH");
 		ka.init(keyPair.getPrivate());
 		ka.doPhase(clientPublicKey, true);
-		byte[] secretKey = computeSecretKey(ka.generateSecret(), publicKey, clientKeyData.getPublicKey());
+		byte[] secretKey = computeSecretKey(ka.generateSecret(), publicKey, clientKeyData.publicKey());
 
 		// Initialize cipher streams.
 		Cipher writeCipher = Cipher.getInstance("AES/CFB8/NoPadding");
 		Cipher readCipher = Cipher.getInstance("AES/CFB8/NoPadding");
 		Key cipherKey = new SecretKeySpec(secretKey, "AES");
 		writeCipher.init(Cipher.ENCRYPT_MODE, cipherKey, new IvParameterSpec(iv));
-		readCipher.init(Cipher.DECRYPT_MODE, cipherKey, new IvParameterSpec(clientKeyData.getIv()));
+		readCipher.init(Cipher.DECRYPT_MODE, cipherKey, new IvParameterSpec(clientKeyData.iv()));
 		return new Pair<>(
 				new CipherInputStream(in, readCipher),
 				new CipherOutputStream(out, writeCipher)

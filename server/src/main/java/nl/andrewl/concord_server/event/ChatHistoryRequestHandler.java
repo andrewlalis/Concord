@@ -1,9 +1,9 @@
 package nl.andrewl.concord_server.event;
 
-import nl.andrewl.concord_core.msg.types.Chat;
-import nl.andrewl.concord_core.msg.types.ChatHistoryRequest;
-import nl.andrewl.concord_core.msg.types.ChatHistoryResponse;
 import nl.andrewl.concord_core.msg.types.Error;
+import nl.andrewl.concord_core.msg.types.chat.Chat;
+import nl.andrewl.concord_core.msg.types.chat.ChatHistoryRequest;
+import nl.andrewl.concord_core.msg.types.chat.ChatHistoryResponse;
 import nl.andrewl.concord_server.ConcordServer;
 import nl.andrewl.concord_server.channel.Channel;
 import nl.andrewl.concord_server.client.ClientThread;
@@ -19,10 +19,10 @@ public class ChatHistoryRequestHandler implements MessageHandler<ChatHistoryRequ
 	@Override
 	public void handle(ChatHistoryRequest msg, ClientThread client, ConcordServer server) {
 		// First try and find a public channel with the given id.
-		var channel = server.getChannelManager().getChannelById(msg.getChannelId()).orElse(null);
+		var channel = server.getChannelManager().getChannelById(msg.channelId()).orElse(null);
 		if (channel == null) {
 			// Couldn't find a public channel, so look for a private channel this client is involved in.
-			channel = server.getChannelManager().getPrivateChannel(client.getClientId(), msg.getChannelId()).orElse(null);
+			channel = server.getChannelManager().getPrivateChannel(client.getClientId(), msg.channelId()).orElse(null);
 		}
 		// If we couldn't find a public or private channel, give up.
 		if (channel == null) {
@@ -55,7 +55,7 @@ public class ChatHistoryRequestHandler implements MessageHandler<ChatHistoryRequ
 		for (var doc : cursor) {
 			chats.add(this.read(doc));
 		}
-		client.sendToClient(new ChatHistoryResponse(channel.getId(), chats));
+		client.sendToClient(new ChatHistoryResponse(channel.getId(), chats.toArray(new Chat[0])));
 	}
 
 	/**
@@ -89,7 +89,7 @@ public class ChatHistoryRequestHandler implements MessageHandler<ChatHistoryRequ
 			chats.add(this.read(doc));
 		}
 		Collections.reverse(chats);
-		return new ChatHistoryResponse(channel.getId(), chats);
+		return new ChatHistoryResponse(channel.getId(), chats.toArray(new Chat[0]));
 	}
 
 	/**

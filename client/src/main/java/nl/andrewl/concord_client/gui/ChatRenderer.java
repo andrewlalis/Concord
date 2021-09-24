@@ -4,7 +4,7 @@ import com.googlecode.lanterna.TerminalTextUtils;
 import com.googlecode.lanterna.graphics.ThemeDefinition;
 import com.googlecode.lanterna.gui2.AbstractListBox;
 import com.googlecode.lanterna.gui2.TextGUIGraphics;
-import nl.andrewl.concord_core.msg.types.Chat;
+import nl.andrewl.concord_core.msg.types.chat.Chat;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -20,10 +20,10 @@ public class ChatRenderer extends AbstractListBox.ListItemRenderer<Chat, ChatLis
 		else {
 			graphics.applyThemeStyle(themeDefinition.getNormal());
 		}
-		graphics.putString(0, 0, chat.getSenderNickname());
-		Instant timestamp = Instant.ofEpochMilli(chat.getTimestamp());
+		graphics.putString(0, 0, chat.senderNickname());
+		Instant timestamp = Instant.ofEpochMilli(chat.timestamp());
 		String timeStr = timestamp.atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"));
-		String label = chat.getSenderNickname() + "@" + timeStr + " : " + chat.getMessage();
+		String label = chat.senderNickname() + "@" + timeStr + " : " + chat.message();
 		label = TerminalTextUtils.fitString(label, graphics.getSize().getColumns());
 		while(TerminalTextUtils.getColumnWidth(label) < graphics.getSize().getColumns()) {
 			label += " ";
