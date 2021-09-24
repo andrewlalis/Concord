@@ -77,6 +77,10 @@ public class ChatHistoryRequest implements Message {
 				.collect(Collectors.joining(";"));
 	}
 
+	/**
+	 * Utility method to extract the query string's values as a key-value map.
+	 * @return A map of the query parameters.
+	 */
 	public Map<String, String> getQueryAsMap() {
 		String[] pairs = this.query.split(";");
 		if (pairs.length == 0) return Map.of();

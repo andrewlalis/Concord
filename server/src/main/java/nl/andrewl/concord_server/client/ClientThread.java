@@ -112,7 +112,7 @@ public class ClientThread extends Thread {
 		}
 
 		if (this.clientId != null) {
-			this.server.getClientManager().deregisterClient(this.clientId);
+			this.server.getClientManager().handleLogOut(this.clientId);
 		}
 		try {
 			if (!this.socket.isClosed()) {
@@ -140,7 +140,7 @@ public class ClientThread extends Thread {
 			try {
 				var msg = this.server.getSerializer().readMessage(this.in);
 				if (msg instanceof Identification id) {
-					this.server.getClientManager().registerClient(id, this);
+					this.server.getClientManager().handleLogIn(id, this);
 					return true;
 				}
 			} catch (IOException e) {

@@ -43,10 +43,15 @@ public class ClientManager {
 	 * the client. The server will register the client in its global set of
 	 * connected clients, and it will immediately move the client to the default
 	 * channel.
+	 * <p>
+	 *     If the client provides a session token with their identification
+	 *     message, then we should load their data from our database, otherwise
+	 *     we assume this is a new client.
+	 * </p>
 	 * @param identification The client's identification data.
 	 * @param clientThread The client manager thread.
 	 */
-	public void registerClient(Identification identification, ClientThread clientThread) {
+	public void handleLogIn(Identification identification, ClientThread clientThread) {
 		ClientConnectionData data;
 		try {
 			data = identification.getSessionToken() == null ? getNewClientData(identification) : getClientDataFromDb(identification);
@@ -78,7 +83,7 @@ public class ClientManager {
 	 * they're currently in.
 	 * @param clientId The id of the client to remove.
 	 */
-	public void deregisterClient(UUID clientId) {
+	public void handleLogOut(UUID clientId) {
 		var client = this.clients.remove(clientId);
 		if (client != null) {
 			client.getCurrentChannel().removeClient(client);

@@ -145,7 +145,7 @@ public class ConcordServer implements Runnable {
 	private void shutdown() {
 		System.out.println("Shutting down the server.");
 		for (var clientId : this.clientManager.getConnectedIds()) {
-			this.clientManager.deregisterClient(clientId);
+			this.clientManager.handleLogOut(clientId);
 		}
 		this.scheduledExecutorService.shutdown();
 		this.executorService.shutdown();
@@ -161,13 +161,7 @@ public class ConcordServer implements Runnable {
 	public void run() {
 		this.running = true;
 		this.scheduledExecutorService.scheduleAtFixedRate(this.discoveryServerPublisher::publish, 0, 1, TimeUnit.MINUTES);
-		StringBuilder startupMessage = new StringBuilder();
-		startupMessage.append("Opened server on port ").append(config.getPort()).append("\n")
-				.append("The following channels are available:\n");
-		for (var channel : this.channelManager.getChannels()) {
-			startupMessage.append("\tChannel \"").append(channel).append('\n');
-		}
-		System.out.println(startupMessage);
+		System.out.printf("Opened server on port %d.\n", config.getPort());
 		while (this.running) {
 			try {
 				Socket socket = this.serverSocket.accept();

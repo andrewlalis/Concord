@@ -36,7 +36,7 @@ public class Serializer {
 		registerType(3, MoveToChannel.class);
 		registerType(4, ChatHistoryRequest.class);
 		registerType(5, ChatHistoryResponse.class);
-		registerType(6, ChannelUsersRequest.class);
+		// Type id 6 removed due to deprecation.
 		registerType(7, ServerUsers.class);
 		registerType(8, ServerMetaData.class);
 		registerType(9, Error.class);

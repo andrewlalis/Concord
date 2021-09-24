@@ -21,11 +21,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * clients in a server.
  */
 @Getter
-public class Channel {
+public class Channel implements Comparable<Channel> {
 	private final ConcordServer server;
 	private final UUID id;
 	private String name;
 
+	/**
+	 * The set of clients that are connected to this channel.
+	 */
 	private final Set<ClientThread> connectedClients;
 
 	/**
@@ -94,6 +97,10 @@ public class Channel {
 		return users;
 	}
 
+	public String getAsTag() {
+		return "#" + this.name;
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
@@ -110,5 +117,10 @@ public class Channel {
 	@Override
 	public String toString() {
 		return this.name + " (" + this.id + ")";
+	}
+
+	@Override
+	public int compareTo(Channel o) {
+		return this.getName().compareTo(o.getName());
 	}
 }

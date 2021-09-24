@@ -23,6 +23,26 @@ import java.util.List;
  * Utility class for handling the establishment of encrypted communication.
  */
 public class Encryption {
+	/**
+	 * Upgrades the given input and output streams to a pair of cipher input and
+	 * output streams. This upgrade follows the following steps:
+	 * <ol>
+	 *     <li>Generate an elliptic curve key pair, and send the public key to the output stream.</li>
+	 *     <li>Read the public key that the other person has sent, from the input stream.</li>
+	 *     <li>Compute a shared private key using the ECDH key exchange, with our private key and their public key.</li>
+	 *     <li>Create the cipher streams from the shared private key.</li>
+	 * </ol>
+	 * @param in The unencrypted input stream.
+	 * @param out The unencrypted output stream.
+	 * @param serializer The message serializer that is used to read and write
+	 *                   messages according to the standard Concord protocol.
+	 * @return The pair of cipher streams, which can be used to send encrypted
+	 * messages.
+	 * @throws GeneralSecurityException If an error occurs while generating keys
+	 * or preparing the cipher streams.
+	 * @throws IOException If an error occurs while reading or writing data on
+	 * the streams.
+	 */
 	public static Pair<CipherInputStream, CipherOutputStream> upgrade(
 			InputStream in,
 			OutputStream out,
