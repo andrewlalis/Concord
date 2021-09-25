@@ -20,6 +20,7 @@ public final class ServerConfig {
 	private String name;
 	private String description;
 	private int port;
+	private boolean acceptAllNewClients;
 	private int chatHistoryMaxCount;
 	private int chatHistoryDefaultCount;
 	private int maxMessageLength;
@@ -51,6 +52,7 @@ public final class ServerConfig {
 					"My Concord Server",
 					"A concord server for my friends and I.",
 					8123,
+					false,
 					100,
 					50,
 					8192,

@@ -9,7 +9,7 @@ import nl.andrewl.concord_server.cli.ServerCliCommand;
 public class ListClientsCommand implements ServerCliCommand {
 	@Override
 	public void handle(ConcordServer server, String[] args) throws Exception {
-		var users = server.getClientManager().getClients();
+		var users = server.getClientManager().getConnectedClients();
 		if (users.isEmpty()) {
 			System.out.println("There are no connected clients.");
 		} else {

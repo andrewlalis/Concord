@@ -85,6 +85,8 @@ public class ConcordServer implements Runnable {
 	private final ClientManager clientManager;
 
 	private final DiscoveryServerPublisher discoveryServerPublisher;
+
+	@Getter
 	private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
 
 	public ConcordServer() throws IOException {

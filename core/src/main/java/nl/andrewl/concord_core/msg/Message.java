@@ -8,12 +8,22 @@ package nl.andrewl.concord_core.msg;
  * </p>
  */
 public interface Message {
+	/**
+	 * Convenience method to get the serializer for this message's type, using
+	 * the static auto-generated set of serializers.
+	 * @param <T> The message type.
+	 * @return The serializer to use to read and write messages of this type.
+	 */
 	@SuppressWarnings("unchecked")
-	default <T extends Message> MessageType<T> getType() {
-		return MessageType.get((Class<T>) this.getClass());
+	default <T extends Message> MessageTypeSerializer<T> getTypeSerializer() {
+		return MessageTypeSerializer.get((Class<T>) this.getClass());
 	}
 
+	/**
+	 * Convenience method to determine the size of this message in bytes.
+	 * @return The size of this message, in bytes.
+	 */
 	default int byteSize() {
-		return getType().byteSizeFunction().apply(this);
+		return getTypeSerializer().byteSizeFunction().apply(this);
 	}
 }

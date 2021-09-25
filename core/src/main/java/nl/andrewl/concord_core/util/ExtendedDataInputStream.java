@@ -1,7 +1,7 @@
 package nl.andrewl.concord_core.util;
 
 import nl.andrewl.concord_core.msg.Message;
-import nl.andrewl.concord_core.msg.MessageType;
+import nl.andrewl.concord_core.msg.MessageTypeSerializer;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -45,7 +45,7 @@ public class ExtendedDataInputStream extends DataInputStream {
 	}
 
 	@SuppressWarnings("unchecked")
-	public <T extends Message> T[] readArray(MessageType<T> type) throws IOException {
+	public <T extends Message> T[] readArray(MessageTypeSerializer<T> type) throws IOException {
 		int length = super.readInt();
 		T[] array = (T[]) Array.newInstance(type.messageClass(), length);
 		for (int i = 0; i < length; i++) {
@@ -76,10 +76,10 @@ public class ExtendedDataInputStream extends DataInputStream {
 			int length = this.readInt();
 			return this.readNBytes(length);
 		} else if (type.isArray() && Message.class.isAssignableFrom(type.getComponentType())) {
-			var messageType = MessageType.get((Class<? extends Message>) type.getComponentType());
+			var messageType = MessageTypeSerializer.get((Class<? extends Message>) type.getComponentType());
 			return this.readArray(messageType);
 		} else if (Message.class.isAssignableFrom(type)) {
-			var messageType = MessageType.get((Class<? extends Message>) type);
+			var messageType = MessageTypeSerializer.get((Class<? extends Message>) type);
 			return messageType.reader().read(this);
 		} else {
 			throw new IOException("Unsupported object type: " + type.getSimpleName());

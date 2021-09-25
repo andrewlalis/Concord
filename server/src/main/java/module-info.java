@@ -4,6 +4,7 @@ module concord_server {
 	requires com.fasterxml.jackson.databind;
 	requires com.fasterxml.jackson.core;
 	requires com.fasterxml.jackson.annotation;
+	requires bcrypt;
 
 	requires java.base;
 	requires java.logging;

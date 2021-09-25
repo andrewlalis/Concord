@@ -63,13 +63,16 @@ public class ChainedDataOutputStream {
 	public <T extends Message> ChainedDataOutputStream writeArray(T[] array) throws IOException {
 		this.out.writeInt(array.length);
 		for (var item : array) {
-			item.getType().writer().write(item, this);
+			writeMessage(item);
 		}
 		return this;
 	}
 
 	public <T extends Message> ChainedDataOutputStream writeMessage(Message msg) throws IOException {
-		msg.getType().writer().write(msg, this);
+		this.out.writeBoolean(msg != null);
+		if (msg != null) {
+			msg.getTypeSerializer().writer().write(msg, this);
+		}
 		return this;
 	}
 
