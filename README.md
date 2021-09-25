@@ -38,6 +38,7 @@ You probably want to customize your server a bit. To do so, first stop your serv
 - `name` The name of the server.
 - `description` A short description of what this server is for, or who it's run by.
 - `port` The port on which the server accepts client connections.
+- `acceptAllNewClients` Whether to automatically accept any new client that registers to this server. Set to false by default, meaning an administrator needs to approve any pending registration before it is complete.
 - `chatHistoryMaxCount` The maximum amount of chat messages that a client can request from the server at any given time. Decrease this to improve performance.
 - `chatHistoryDefaultCount` The default number of chat messages that are provided to clients when they join a channel, if they don't explicitly request a certain amount. Decrease this to improve performance.
 - `maxMessageLength` The maximum length of a message. Messages longer than this will be rejected.
@@ -46,11 +47,6 @@ You probably want to customize your server a bit. To do so, first stop your serv
 
 ## Server CLI
 
-As mentioned briefly, the server supports a basic command-line-interface with some commands. You can show which commands are available via the `help` command. The following is a list of some of the most useful commands and a description of their functionality:
-
-- `add-channel <name>` Adds a new channel to the server with the given name. Channel names cannot be blank, and they cannot be duplicates of an existing channel name.
-- `remove-channel <name>` Removes a channel.
-- `list-clients` Shows a list of all connected clients.
-- `stop` Stops the server, disconnecting all clients.
+As mentioned briefly, the server supports a basic command-line-interface with some commands. You can show the commands that are available via the `help` command.
 
 Each server uses a single [Nitrite](https://www.dizitart.org/nitrite-database/#what-is-nitrite) database to hold messages and other information.
