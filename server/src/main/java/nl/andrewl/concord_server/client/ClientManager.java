@@ -50,6 +50,7 @@ public class ClientManager {
 		if (userDoc != null) throw new InvalidIdentificationException("Username is taken.");
 		if (this.server.getConfig().isAcceptAllNewClients()) {
 			var clientData = this.authService.registerNewClient(registration);
+			clientThread.sendToClient(new RegistrationStatus(RegistrationStatus.Type.ACCEPTED));
 			this.initializeClientConnection(clientData, clientThread);
 		} else {
 			var clientId = this.authService.registerPendingClient(registration);
