@@ -1,0 +1,7 @@
+module:concord_core
+nl.andrewl.concord_core.msg
+nl.andrewl.concord_core.msg.types
+nl.andrewl.concord_core.msg.types.channel
+nl.andrewl.concord_core.msg.types.chat
+nl.andrewl.concord_core.msg.types.client_setup
+nl.andrewl.concord_core.util

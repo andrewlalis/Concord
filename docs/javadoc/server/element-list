@@ -1,0 +1,9 @@
+module:concord_server
+nl.andrewl.concord_server
+nl.andrewl.concord_server.channel
+nl.andrewl.concord_server.cli
+nl.andrewl.concord_server.cli.command
+nl.andrewl.concord_server.client
+nl.andrewl.concord_server.config
+nl.andrewl.concord_server.event
+nl.andrewl.concord_server.util
