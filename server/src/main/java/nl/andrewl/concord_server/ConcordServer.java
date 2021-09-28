@@ -27,10 +27,24 @@ import java.util.concurrent.TimeUnit;
  * The main server implementation, which handles accepting new clients.
  */
 public class ConcordServer implements Runnable {
+	/**
+	 * The path to this server's configuration file.
+	 */
 	private static final Path CONFIG_FILE = Path.of("server-config.json");
+
+	/**
+	 * The path to this server's database file.
+	 */
 	private static final Path DATABASE_FILE = Path.of("concord-server.db");
 
+	/**
+	 * Running flag that's used to signal this server's thread to shutdown.
+	 */
 	private volatile boolean running;
+
+	/**
+	 * This server's socket, used to accept new client connections.
+	 */
 	private final ServerSocket serverSocket;
 
 	/**

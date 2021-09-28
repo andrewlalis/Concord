@@ -23,10 +23,29 @@ import java.util.stream.Collectors;
  * to a server.
  */
 public class ClientManager {
+	/**
+	 * A reference to the server that this client manager is for.
+	 */
 	private final ConcordServer server;
+
+	/**
+	 * The set of connected clients, mapped by their id.
+	 */
 	private final Map<UUID, ClientThread> clients;
+
+	/**
+	 * The set of connected pending clients, mapped by their id.
+	 */
 	private final Map<UUID, ClientThread> pendingClients;
+
+	/**
+	 * The nitrite collection containing user data.
+	 */
 	private final NitriteCollection userCollection;
+
+	/**
+	 * The service to use to authenticate incoming connections.
+	 */
 	private final AuthenticationService authService;
 
 	/**
