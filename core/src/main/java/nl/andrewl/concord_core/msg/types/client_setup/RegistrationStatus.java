@@ -6,10 +6,10 @@ import nl.andrewl.concord_core.msg.Message;
  * A response from the server which indicates the current status of the client's
  * registration request.
  */
-public record RegistrationStatus (Type type) implements Message {
+public record RegistrationStatus (Type type, String reason) implements Message {
 	public enum Type {PENDING, ACCEPTED, REJECTED}
 
 	public static RegistrationStatus pending() {
-		return new RegistrationStatus(Type.PENDING);
+		return new RegistrationStatus(Type.PENDING, null);
 	}
 }

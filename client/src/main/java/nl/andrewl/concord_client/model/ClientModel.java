@@ -12,7 +12,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 @Getter
 public class ClientModel {
-	private UUID id;
+	private final UUID id;
 	private String nickname;
 	private ServerMetaData serverMetaData;
 

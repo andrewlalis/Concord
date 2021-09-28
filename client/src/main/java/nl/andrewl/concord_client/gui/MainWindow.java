@@ -50,7 +50,7 @@ public class MainWindow extends BasicWindow {
 		if (nickname == null) return;
 
 		try {
-			var client = new ConcordClient(host, port, nickname, Path.of("concord-session-tokens.json"));
+			var client = ConcordClient.login(host, port, nickname, "testpass");
 			var chatPanel = new ServerPanel(client, this);
 			client.getModel().addListener(chatPanel);
 			new Thread(client).start();

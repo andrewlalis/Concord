@@ -27,9 +27,12 @@ public class ClientManager {
 	private final Map<UUID, ClientThread> clients;
 	private final Map<UUID, ClientThread> pendingClients;
 	private final NitriteCollection userCollection;
-
 	private final AuthenticationService authService;
 
+	/**
+	 * Constructs a new client manager for the given server.
+	 * @param server The server that the client manager is for.
+	 */
 	public ClientManager(ConcordServer server) {
 		this.server = server;
 		this.clients = new ConcurrentHashMap<>();
@@ -45,12 +48,28 @@ public class ClientManager {
 		server.getScheduledExecutorService().scheduleAtFixedRate(this.authService::removeExpiredSessionTokens, 1, 1, TimeUnit.DAYS);
 	}
 
+	/**
+	 * Handles an attempt by a new client to register as a user for this server.
+	 * If the server is set to automatically accept all new clients, the new
+	 * user is registered and the client is sent a {@link RegistrationStatus}
+	 * with the {@link RegistrationStatus.Type#ACCEPTED} value, closely followed
+	 * by a {@link ServerWelcome} message. Otherwise, the client is sent a
+	 * {@link RegistrationStatus.Type#PENDING} response, which indicates that
+	 * the client's registration is pending approval. The client can choose to
+	 * remain connected and wait for approval, or disconnect and try logging in
+	 * later.
+	 *
+	 * @param registration The client's registration information.
+	 * @param clientThread The client thread.
+	 * @throws InvalidIdentificationException If the user's registration info is
+	 * not valid.
+	 */
 	public void handleRegistration(ClientRegistration registration, ClientThread clientThread) throws InvalidIdentificationException {
 		Document userDoc = this.userCollection.find(Filters.eq("username", registration.username())).firstOrDefault();
 		if (userDoc != null) throw new InvalidIdentificationException("Username is taken.");
 		if (this.server.getConfig().isAcceptAllNewClients()) {
 			var clientData = this.authService.registerNewClient(registration);
-			clientThread.sendToClient(new RegistrationStatus(RegistrationStatus.Type.ACCEPTED));
+			clientThread.sendToClient(new RegistrationStatus(RegistrationStatus.Type.ACCEPTED, null));
 			this.initializeClientConnection(clientData, clientThread);
 		} else {
 			var clientId = this.authService.registerPendingClient(registration);
@@ -58,6 +77,23 @@ public class ClientManager {
 		}
 	}
 
+	/**
+	 * Handles an attempt by a new client to login as an existing user to the
+	 * server. If the user's credentials are valid, then the following can
+	 * result:
+	 * <ul>
+	 *     <li>If the user's registration is still pending, they will be sent a
+	 *     {@link RegistrationStatus.Type#PENDING} response, to indicate that
+	 *     their registration is still pending approval.</li>
+	 *     <li>For non-pending (normal) users, they will be logged into the
+	 *     server and sent a {@link ServerWelcome} message.</li>
+	 * </ul>
+	 *
+	 * @param login The client's login credentials.
+	 * @param clientThread The client thread managing the connection.
+	 * @throws InvalidIdentificationException If the client's credentials are
+	 * incorrect.
+	 */
 	public void handleLogin(ClientLogin login, ClientThread clientThread) throws InvalidIdentificationException {
 		Document userDoc = this.authService.findAndAuthenticateUser(login);
 		if (userDoc == null) throw new InvalidIdentificationException("Username or password is incorrect.");
@@ -68,20 +104,38 @@ public class ClientManager {
 			this.initializePendingClientConnection(userId, username, clientThread);
 		} else {
 			String sessionToken = this.authService.generateSessionToken(userId);
-			this.initializeClientConnection(new AuthenticationService.ClientConnectionData(userId, username, sessionToken, false), clientThread);
+			this.initializeClientConnection(new ClientConnectionData(userId, username, sessionToken, false), clientThread);
 		}
 	}
 
+	/**
+	 * Handles an attempt by a new client to login as an existing user to the
+	 * server with a session token from their previous session. If the token is
+	 * valid, the user will be logged in and sent a {@link ServerWelcome}
+	 * response.
+	 *
+	 * @param sessionResume The session token data.
+	 * @param clientThread The client thread managing the connection.
+	 * @throws InvalidIdentificationException If the token is invalid or refers
+	 * to a non-existent user.
+	 */
 	public void handleSessionResume(ClientSessionResume sessionResume, ClientThread clientThread) throws InvalidIdentificationException {
 		Document userDoc = this.authService.findAndAuthenticateUser(sessionResume);
 		if (userDoc == null) throw new InvalidIdentificationException("Invalid session. Log in to obtain a new session token.");
 		UUID userId = userDoc.get("id", UUID.class);
 		String username = userDoc.get("username", String.class);
 		String sessionToken = this.authService.generateSessionToken(userId);
-		this.initializeClientConnection(new AuthenticationService.ClientConnectionData(userId, username, sessionToken, false), clientThread);
+		this.initializeClientConnection(new ClientConnectionData(userId, username, sessionToken, false), clientThread);
 	}
 
-	public void decidePendingUser(UUID userId, boolean accepted) {
+	/**
+	 * Used to accept or reject a pending user's registration. If the given user
+	 * is not pending approval, this method does nothing.
+	 * @param userId The id of the pending user.
+	 * @param accepted Whether to accept or reject.
+	 * @param reason The reason for rejection (or acceptance). This may be null.
+	 */
+	public void decidePendingUser(UUID userId, boolean accepted, String reason) {
 		Document userDoc = this.userCollection.find(Filters.and(Filters.eq("id", userId), Filters.eq("pending", true))).firstOrDefault();
 		if (userDoc != null) {
 			if (accepted) {
@@ -90,16 +144,16 @@ public class ClientManager {
 				// If the pending user is still connected, upgrade them to a normal connected client.
 				var clientThread = this.pendingClients.remove(userId);
 				if (clientThread != null) {
-					clientThread.sendToClient(new RegistrationStatus(RegistrationStatus.Type.ACCEPTED));
+					clientThread.sendToClient(new RegistrationStatus(RegistrationStatus.Type.ACCEPTED, reason));
 					String username = userDoc.get("username", String.class);
 					String sessionToken = this.authService.generateSessionToken(userId);
-					this.initializeClientConnection(new AuthenticationService.ClientConnectionData(userId, username, sessionToken, true), clientThread);
+					this.initializeClientConnection(new ClientConnectionData(userId, username, sessionToken, true), clientThread);
 				}
 			} else {
 				this.userCollection.remove(userDoc);
 				var clientThread = this.pendingClients.remove(userId);
 				if (clientThread != null) {
-					clientThread.sendToClient(new RegistrationStatus(RegistrationStatus.Type.REJECTED));
+					clientThread.sendToClient(new RegistrationStatus(RegistrationStatus.Type.REJECTED, reason));
 				}
 			}
 		}
@@ -111,22 +165,30 @@ public class ClientManager {
 	 * @param clientData The data about the client that has connected.
 	 * @param clientThread The thread managing the client's connection.
 	 */
-	private void initializeClientConnection(AuthenticationService.ClientConnectionData clientData, ClientThread clientThread) {
-		this.clients.put(clientData.id(), clientThread);
+	private void initializeClientConnection(ClientConnectionData clientData, ClientThread clientThread) {
 		clientThread.setClientId(clientData.id());
-		clientThread.setClientNickname(clientData.nickname());
+		clientThread.setClientNickname(clientData.username());
 		var defaultChannel = this.server.getChannelManager().getDefaultChannel().orElseThrow();
 		clientThread.sendToClient(new ServerWelcome(clientData.id(), clientData.sessionToken(), defaultChannel.getId(), defaultChannel.getName(), this.server.getMetaData()));
+		this.clients.put(clientData.id(), clientThread); // We only add the client after sending the welcome, to make sure that we send the welcome packet first.
 		defaultChannel.addClient(clientThread);
 		clientThread.setCurrentChannel(defaultChannel);
 		this.broadcast(new ServerUsers(this.getConnectedClients().toArray(new UserData[0])));
 	}
 
+	/**
+	 * Initializes a connection to a client whose registration is pending, thus
+	 * they should simply keep their connection alive, and receive a {@link RegistrationStatus.Type#PENDING}
+	 * message, instead of a {@link ServerWelcome}.
+	 * @param clientId The id of the client.
+	 * @param pendingUsername The client's username.
+	 * @param clientThread The thread managing the client's connection.
+	 */
 	private void initializePendingClientConnection(UUID clientId, String pendingUsername, ClientThread clientThread) {
-		this.pendingClients.put(clientId, clientThread);
 		clientThread.setClientId(clientId);
 		clientThread.setClientNickname(pendingUsername);
 		clientThread.sendToClient(RegistrationStatus.pending());
+		this.pendingClients.put(clientId, clientThread);
 	}
 
 	/**
@@ -166,6 +228,9 @@ public class ClientManager {
 		}
 	}
 
+	/**
+	 * @return The list of connected clients.
+	 */
 	public List<UserData> getConnectedClients() {
 		return this.clients.values().stream()
 				.sorted(Comparator.comparing(ClientThread::getClientNickname))
@@ -173,6 +238,9 @@ public class ClientManager {
 				.collect(Collectors.toList());
 	}
 
+	/**
+	 * @return The list of connected, pending clients.
+	 */
 	public List<UserData> getPendingClients() {
 		return this.pendingClients.values().stream()
 				.sorted(Comparator.comparing(ClientThread::getClientNickname))
@@ -180,14 +248,27 @@ public class ClientManager {
 				.collect(Collectors.toList());
 	}
 
+	/**
+	 * @return The set of ids of all connected clients.
+	 */
 	public Set<UUID> getConnectedIds() {
 		return this.clients.keySet();
 	}
 
+	/**
+	 * Tries to find a connected client with the given id.
+	 * @param id The id to look for.
+	 * @return An optional client thread.
+	 */
 	public Optional<ClientThread> getClientById(UUID id) {
 		return Optional.ofNullable(this.clients.get(id));
 	}
 
+	/**
+	 * Tries to find a pending client with the given id.
+	 * @param id The id to look for.
+	 * @return An optional client thread.
+	 */
 	public Optional<ClientThread> getPendingClientById(UUID id) {
 		return Optional.ofNullable(this.pendingClients.get(id));
 	}

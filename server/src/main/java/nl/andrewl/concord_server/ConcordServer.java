@@ -124,6 +124,9 @@ public class ConcordServer implements Runnable {
 		}
 	}
 
+	/**
+	 * @return The server's metadata.
+	 */
 	public ServerMetaData getMetaData() {
 		return new ServerMetaData(
 				this.config.getName(),

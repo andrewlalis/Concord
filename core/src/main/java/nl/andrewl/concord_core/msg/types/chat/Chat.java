@@ -8,9 +8,7 @@ import java.util.UUID;
 /**
  * This message contains information about a chat message that a user sent.
  */
-public record Chat (
-		UUID id, UUID senderId, String senderNickname, long timestamp, String message
-) implements Message {
+public record Chat (UUID id, UUID senderId, String senderNickname, long timestamp, String message) implements Message {
 	public Chat(UUID senderId, String senderNickname, long timestamp, String message) {
 		this(null, senderId, senderNickname, timestamp, message);
 	}

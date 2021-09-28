@@ -1,3 +1,12 @@
+/**
+ * The core components that are used by both the Concord server and the default
+ * client implementation. Includes record-based message serialization, and some
+ * utilities for message passing.
+ * <p>
+ *     This core module defines the message protocol that clients must use to
+ *     communicate with any server.
+ * </p>
+ */
 module concord_core {
 	requires static lombok;
 

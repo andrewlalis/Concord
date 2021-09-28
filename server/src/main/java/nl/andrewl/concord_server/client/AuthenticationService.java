@@ -24,8 +24,6 @@ import java.util.UUID;
  * and logging in.
  */
 public class AuthenticationService {
-	public static record ClientConnectionData(UUID id, String nickname, String sessionToken, boolean newClient) {}
-
 	private final NitriteCollection userCollection;
 	private final NitriteCollection sessionTokenCollection;
 	private final ConcordServer server;
