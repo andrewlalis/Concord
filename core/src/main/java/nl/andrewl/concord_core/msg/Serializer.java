@@ -3,15 +3,13 @@ package nl.andrewl.concord_core.msg;
 import nl.andrewl.concord_core.msg.types.Error;
 import nl.andrewl.concord_core.msg.types.ServerMetaData;
 import nl.andrewl.concord_core.msg.types.ServerUsers;
+import nl.andrewl.concord_core.msg.types.UserData;
 import nl.andrewl.concord_core.msg.types.channel.CreateThread;
 import nl.andrewl.concord_core.msg.types.channel.MoveToChannel;
 import nl.andrewl.concord_core.msg.types.chat.Chat;
 import nl.andrewl.concord_core.msg.types.chat.ChatHistoryRequest;
 import nl.andrewl.concord_core.msg.types.chat.ChatHistoryResponse;
-import nl.andrewl.concord_core.msg.types.client_setup.Identification;
-import nl.andrewl.concord_core.msg.types.client_setup.KeyData;
-import nl.andrewl.concord_core.msg.types.client_setup.Registration;
-import nl.andrewl.concord_core.msg.types.client_setup.ServerWelcome;
+import nl.andrewl.concord_core.msg.types.client_setup.*;
 import nl.andrewl.concord_core.util.ChainedDataOutputStream;
 import nl.andrewl.concord_core.util.ExtendedDataInputStream;
 
@@ -20,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -32,31 +31,36 @@ public class Serializer {
 	 * The mapping which defines each supported message type and the byte value
 	 * used to identify it when reading and writing messages.
 	 */
-	private final Map<Byte, MessageType<?>> messageTypes = new HashMap<>();
+	private final Map<Byte, MessageTypeSerializer<?>> messageTypes = new HashMap<>();
 
 	/**
 	 * An inverse of {@link Serializer#messageTypes} which is used to look up a
 	 * message's byte value when you know the class of the message.
 	 */
-	private final Map<MessageType<?>, Byte> inverseMessageTypes = new HashMap<>();
+	private final Map<MessageTypeSerializer<?>, Byte> inverseMessageTypes = new HashMap<>();
 
 	/**
 	 * Constructs a new serializer instance, with a standard set of supported
 	 * message types.
 	 */
 	public Serializer() {
-		registerType(0, Identification.class);
-		registerType(1, ServerWelcome.class);
-		registerType(2, Chat.class);
-		registerType(3, MoveToChannel.class);
-		registerType(4, ChatHistoryRequest.class);
-		registerType(5, ChatHistoryResponse.class);
-		registerType(6, Registration.class);
-		registerType(7, ServerUsers.class);
-		registerType(8, ServerMetaData.class);
-		registerType(9, Error.class);
-		registerType(10, CreateThread.class);
-		registerType(11, KeyData.class);
+		List<Class<? extends Message>> messageClasses = List.of(
+				// Utility messages.
+				Error.class,
+				UserData.class,
+				ServerUsers.class,
+				// Client setup messages.
+				KeyData.class, ClientRegistration.class, ClientLogin.class, ClientSessionResume.class,
+				RegistrationStatus.class, ServerWelcome.class, ServerMetaData.class,
+				// Chat messages.
+				Chat.class, ChatHistoryRequest.class, ChatHistoryResponse.class,
+				// Channel messages.
+				MoveToChannel.class,
+				CreateThread.class
+		);
+		for (int id = 0; id < messageClasses.size(); id++) {
+			registerType(id, messageClasses.get(id));
+		}
 	}
 
 	/**
@@ -67,7 +71,7 @@ public class Serializer {
 	 * @param messageClass The type of message associated with the given id.
 	 */
 	private synchronized <T extends Message> void registerType(int id, Class<T> messageClass) {
-		MessageType<T> type = MessageType.get(messageClass);
+		MessageTypeSerializer<T> type = MessageTypeSerializer.get(messageClass);
 		messageTypes.put((byte) id, type);
 		inverseMessageTypes.put(type, (byte) id);
 	}
@@ -104,12 +108,12 @@ public class Serializer {
 	 */
 	public <T extends Message> void writeMessage(Message msg, OutputStream o) throws IOException {
 		DataOutputStream d = new DataOutputStream(o);
-		Byte typeId = inverseMessageTypes.get(msg.getType());
+		Byte typeId = inverseMessageTypes.get(msg.getTypeSerializer());
 		if (typeId == null) {
 			throw new IOException("Unsupported message type: " + msg.getClass().getSimpleName());
 		}
 		d.writeByte(typeId);
-		msg.getType().writer().write(msg, new ChainedDataOutputStream(d));
+		msg.getTypeSerializer().writer().write(msg, new ChainedDataOutputStream(d));
 		d.flush();
 	}
 }

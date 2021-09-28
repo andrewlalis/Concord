@@ -33,7 +33,7 @@ public class Channel implements Comparable<Channel> {
 
 	/**
 	 * A document collection which holds all messages created in this channel,
-	 * indexed on id, timestamp, message, and sender's nickname.
+	 * indexed on id, timestamp, message, and sender's username.
 	 */
 	private final NitriteCollection messageCollection;
 

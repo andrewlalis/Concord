@@ -19,24 +19,24 @@ import java.util.function.Function;
  * @param reader A reader that can read messages from an input stream.
  * @param writer A writer that write messages from an input stream.
  */
-public record MessageType<T extends Message>(
+public record MessageTypeSerializer<T extends Message>(
 		Class<T> messageClass,
 		Function<T, Integer> byteSizeFunction,
 		MessageReader<T> reader,
 		MessageWriter<T> writer
 ) {
-	private static final Map<Class<?>, MessageType<?>> generatedMessageTypes = new HashMap<>();
+	private static final Map<Class<?>, MessageTypeSerializer<?>> generatedMessageTypes = new HashMap<>();
 
 	/**
-	 * Gets the {@link MessageType} instance for a given message class, and
+	 * Gets the {@link MessageTypeSerializer} instance for a given message class, and
 	 * generates a new implementation if none exists yet.
 	 * @param messageClass The class of the message to get a type for.
 	 * @param <T> The type of the message.
 	 * @return The message type.
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T extends Message> MessageType<T> get(Class<T> messageClass) {
-		return (MessageType<T>) generatedMessageTypes.computeIfAbsent(messageClass, c -> generateForRecord((Class<T>) c));
+	public static <T extends Message> MessageTypeSerializer<T> get(Class<T> messageClass) {
+		return (MessageTypeSerializer<T>) generatedMessageTypes.computeIfAbsent(messageClass, c -> generateForRecord((Class<T>) c));
 	}
 
 	/**
@@ -49,7 +49,7 @@ public record MessageType<T extends Message>(
 	 * @param <T> The type of the message.
 	 * @return A message type instance.
 	 */
-	public static <T extends Message> MessageType<T> generateForRecord(Class<T> messageTypeClass) {
+	public static <T extends Message> MessageTypeSerializer<T> generateForRecord(Class<T> messageTypeClass) {
 		RecordComponent[] components = messageTypeClass.getRecordComponents();
 		Constructor<T> constructor;
 		try {
@@ -58,7 +58,7 @@ public record MessageType<T extends Message>(
 		} catch (NoSuchMethodException e) {
 			throw new IllegalArgumentException(e);
 		}
-		return new MessageType<>(
+		return new MessageTypeSerializer<>(
 				messageTypeClass,
 				generateByteSizeFunction(components),
 				generateReader(constructor),

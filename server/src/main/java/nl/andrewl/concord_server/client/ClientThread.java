@@ -4,8 +4,11 @@ import lombok.Getter;
 import lombok.Setter;
 import nl.andrewl.concord_core.msg.Encryption;
 import nl.andrewl.concord_core.msg.Message;
-import nl.andrewl.concord_core.msg.types.client_setup.Identification;
+import nl.andrewl.concord_core.msg.types.Error;
 import nl.andrewl.concord_core.msg.types.UserData;
+import nl.andrewl.concord_core.msg.types.client_setup.ClientLogin;
+import nl.andrewl.concord_core.msg.types.client_setup.ClientRegistration;
+import nl.andrewl.concord_core.msg.types.client_setup.ClientSessionResume;
 import nl.andrewl.concord_server.ConcordServer;
 import nl.andrewl.concord_server.channel.Channel;
 
@@ -135,14 +138,25 @@ public class ClientThread extends Thread {
 			System.err.println("Could not establish end-to-end encryption with the client.");
 			return false;
 		}
+		final var clientManager = this.server.getClientManager();
 		int attempts = 0;
 		while (attempts < 5) {
 			try {
 				var msg = this.server.getSerializer().readMessage(this.in);
-				if (msg instanceof Identification id) {
-					this.server.getClientManager().handleLogIn(id, this);
+				if (msg instanceof ClientRegistration cr) {
+					clientManager.handleRegistration(cr, this);
 					return true;
+				} else if (msg instanceof ClientLogin cl) {
+					clientManager.handleLogin(cl, this);
+					return true;
+				} else if (msg instanceof ClientSessionResume csr) {
+					clientManager.handleSessionResume(csr, this);
+					return true;
+				} else {
+					this.sendToClient(Error.warning("Invalid identification message: " + msg.getClass().getSimpleName() + ", expected ClientRegistration, ClientLogin, or ClientSessionResume."));
 				}
+			} catch (InvalidIdentificationException e) {
+				this.sendToClient(Error.warning(e.getMessage()));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

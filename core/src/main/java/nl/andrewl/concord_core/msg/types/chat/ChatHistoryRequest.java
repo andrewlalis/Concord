@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
  * </p>
  * <p>
  *     The following query parameters are supported:
+ * </p>
  *     <ul>
  *         <li><code>count</code> - Fetch up to N messages. Minimum of 1, and
  *         a server-specific maximum count, usually no higher than 1000.</li>
@@ -37,7 +38,6 @@ import java.util.stream.Collectors;
  *         is present, all others are ignored, and a list containing the single
  *         message is returned, if it could be found, otherwise an empty list.</li>
  *     </ul>
- * </p>
  * <p>
  *     Responses to this request are sent via {@link ChatHistoryResponse}, where
  *     the list of messages is always sorted by the timestamp.

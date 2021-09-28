@@ -85,6 +85,8 @@ public class ConcordServer implements Runnable {
 	private final ClientManager clientManager;
 
 	private final DiscoveryServerPublisher discoveryServerPublisher;
+
+	@Getter
 	private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
 
 	public ConcordServer() throws IOException {
@@ -122,6 +124,9 @@ public class ConcordServer implements Runnable {
 		}
 	}
 
+	/**
+	 * @return The server's metadata.
+	 */
 	public ServerMetaData getMetaData() {
 		return new ServerMetaData(
 				this.config.getName(),

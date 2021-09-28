@@ -35,10 +35,14 @@ public class MessageUtils {
 		return size;
 	}
 
+	public static int getByteSize(Message msg) {
+		return 1 + (msg == null ? 0 : msg.byteSize());
+	}
+
 	public static <T extends Message> int getByteSize(T[] items) {
 		int count = Integer.BYTES;
 		for (var item : items) {
-			count += item.byteSize();
+			count += getByteSize(items);
 		}
 		return count;
 	}
@@ -59,7 +63,7 @@ public class MessageUtils {
 		} else if (o.getClass().isArray() && Message.class.isAssignableFrom(o.getClass().getComponentType())) {
 			return getByteSize((Message[]) o);
 		} else if (o instanceof Message) {
-			return ((Message) o).byteSize();
+			return getByteSize((Message) o);
 		} else {
 			throw new IllegalArgumentException("Unsupported object type: " + o.getClass().getSimpleName());
 		}
