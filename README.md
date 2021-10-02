@@ -1,34 +1,25 @@
 # Concord
-Console-based real-time messaging platform, inspired by Discord.
+Open-source, independent, real-time messaging platform inspired by Discord. Here's what it can do:
 
-## Vision
+- Host your own server, on your own hardware (no "cloud" servers). All the server's data is yours; do whatever you want with it, or nothing at all.
+- Join someone else's server (with encryption between you and the server).
+- Send and receive messages in real time, in different "channels" on a server.
+- Send and receive private messages with other server members.
 
-This platform will be organized by many independent servers, each of which will support the following:
-- [x] Multiple message channels. By default, there's one `general` channel.
-- [x] Broadcasting itself on certain discovery servers for users to find. The server decides where it wants to be discovered, if at all.
-- [ ] Starting threads as spin-offs of a source message (with infinite recursion, i.e. threads within threads).
-- [x] Private message between users in a server. **No support for private messaging users outside the context of a server.**
-- [ ] Banning users from the server.
-- [ ] Voice channels.
-- [x] Persistent users. Connect and disconnect from a server multiple times, while keeping your information intact.
-
-
-Here's a short demonstration of its current features:
-
-https://user-images.githubusercontent.com/9953867/131097344-27cddf74-0cda-44e7-95d0-c9dc607291d6.mp4
+And here's what we have planned for the future:
+- [ ] Threads: create a spin-off thread of messages from a single source message, to keep the main chat tidy.
+- [ ] Voice communication, both in channels, and in private messages. The plan is to give all channels a configurable set of *capabilities*: by default all channels support text messages, but you can add voice chat support, streaming support, and more.
+- [ ] Comprehensive server permissions system. We want to make it as easy as possible to configure the server's permissions to give admins fine-grained control over what users on their server can do. To this end, we plan on adding *roles* that can be assigned to particular users to grant them certain permissions.
+- [ ] Emoji and formatted text support. React to a message with an emoji, and use markdown in your messages.
+- [ ] File uploads: Allow users on your server to share files with each other as attachments to messages, with a high degree of configurability, so that you can decide how to deal with all the uploaded data.
+- [ ] Plugins, bots, and automation! We want to make Concord as extensible as possible, so we plan to add first-class support for third-party plugins, and an API for developers to create bots that can participate in a server. We also want to provide admins with utilities for automating tasks without needing to know how to code (like auto-moderation, old data pruning, spam filters, etc.).
+- [ ] Opt-in discovery services, so that users can find servers without needing an invitation.
 
 # Concord Client
 
-To use the client, simply download the latest `concord-client.jar` JAR file from [the releases page](https://github.com/andrewlalis/Concord/releases) and run it with Java (version 16 or higher) from anywhere on your machine.
-
-Once you've started it, press **Enter** to click the button "Connect to Server". You will be prompted for the server IP address, and then a nickname for yourself, before you join the server. To disconnect, press **CTRL+C** at any time.
-
-![concord_client_server_panel](https://user-images.githubusercontent.com/9953867/131096996-c9eec7e0-e8f0-4755-a14c-b81c727fba43.PNG)
-
-Your console should look something like the above image. On the left, you have a list of channels, with a `*` next to the channel you're currently in. On the right, you have a list of all the other people that are in your channel. And of course in the middle you've got your chat, and a chatbox you can type messages in.
+*Client application is currently work-in-progress.*
 
 # Concord Server
-
 To start up your own server, download the latest `concord-server.jar` JAR file from [the releases page](https://github.com/andrewlalis/Concord/releases) and run it with Java (version 16 or higher). The first time you run the server with `java -jar concord-server.jar`, it will generate a `server-config.json` configuration file, and a `concord-server.db` database file.
 
 ## Configuring the Server

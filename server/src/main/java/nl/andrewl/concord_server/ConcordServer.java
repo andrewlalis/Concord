@@ -24,7 +24,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * The main server implementation, which handles accepting new clients.
+ * The main server implementation, which serves as the entry point for
+ * connecting client, and the central place for all components that are used
+ * when handling client messages.
  */
 public class ConcordServer implements Runnable {
 	/**
@@ -103,6 +105,10 @@ public class ConcordServer implements Runnable {
 	@Getter
 	private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
 
+	/**
+	 * Constructs the server and opens a server socket at the configured port.
+	 * @throws IOException If a server socket could not be opened.
+	 */
 	public ConcordServer() throws IOException {
 		this.idProvider = new UUIDProvider();
 		this.config = ServerConfig.loadOrCreate(CONFIG_FILE, idProvider);
