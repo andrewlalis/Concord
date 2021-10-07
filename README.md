@@ -1,4 +1,6 @@
 # Concord
+**NOTE: To improve organization, Concord has been moved to the [Concord Communication](https://github.com/Concord-Communication) GitHub organization.**
+
 Open-source, independent, real-time messaging platform inspired by Discord. Here's what it can do:
 
 - Host your own server, on your own hardware (no "cloud" servers). All the server's data is yours; do whatever you want with it, or nothing at all.
